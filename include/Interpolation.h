@@ -114,6 +114,7 @@ inline Float NewtonPolynomial::operator()(Float in_val)
 	return rst;
 }
 
+//Hermite polynomial interpolation can be generalized to a lot of areas.
 class HermitePolynomial :public Interpolation
 {
 public:
