@@ -1,9 +1,10 @@
-#include <glm/glm.hpp>
+#pragma once
 
+#include <glm/glm.hpp>
 #include <iostream>
 
 template<typename T, int N>
-std::ostream& operator<<(std::ostream& out, glm::vec<N, T>& vec)
+inline std::ostream& operator<<(std::ostream& out, glm::vec<N, T>& vec)
 {
 	for (int i = 0; i < N; ++i)
 	{

@@ -28,11 +28,33 @@ public:
 	using Interpolation::Interpolation;
 
 	Float operator()(Float in_val) override;
-	void evaluate() override;
+	void evaluate() override {}
 	Result error_bound(Float& error_b) override;
-	using Interpolation::Interpolation;
 private:
 };
+
+inline Float LagrangianPolynomial::operator()(Float in_val)
+{
+	Float rst = 0;
+	for (int i = 0; i < Points.size(); ++i)
+	{
+		Float temp = Points[i].y;
+		for (int j = 0; j < Points.size(); ++j)
+		{
+			if (j != i)
+			{
+				temp *= (in_val - Points[j].x) / (Points[i].x - Points[j].x);
+			}
+		}
+		rst += temp;
+	}
+	return rst;
+}
+
+inline Result LagrangianPolynomial::error_bound(Float& error_b)
+{
+	return  Result::Success;
+}
 
 class NewtonPolynomial :public Interpolation
 {
