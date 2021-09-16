@@ -2,6 +2,7 @@
 #include <type.hpp>
 #include <Interpolation.h>
 
+#include <Eigen/Eigen>
 int main()
 {
 	std::vector<Point2> points;
@@ -15,5 +16,5 @@ int main()
 	LagrangianPolynomial lagrangian(points);
 	newton.evaluate();
 	lagrangian.evaluate();
-	std::cout << newton(0.6) - lagrangian(0.6);
+	std::cout << newton(0.6);
 }

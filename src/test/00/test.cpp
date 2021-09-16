@@ -3,6 +3,6 @@
 
 int main()
 {
-	glm::vec3 vec(1, 2, 3);
-	std::cout << vec;
+	Eigen::Vector3f vec(1, 2, 3);
+	std::cout << vec.transpose();
 }
