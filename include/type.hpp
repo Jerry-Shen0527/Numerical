@@ -1,18 +1,8 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "Eigen/Eigen"
 #include <iostream>
-
-template<typename T, int N>
-inline std::ostream& operator<<(std::ostream& out, glm::vec<N, T>& vec)
-{
-	for (int i = 0; i < N; ++i)
-	{
-		out << vec[i] << ' ';
-	}
-	return out;
-}
 
 using Float = double;
 
-using Point2 = glm::vec<2, Float>;
+using Point2 = Eigen::Vector2f;

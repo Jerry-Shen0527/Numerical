@@ -39,12 +39,12 @@ inline Float LagrangianPolynomial::operator()(Float in_val)
 	Float rst = 0;
 	for (int i = 0; i < Points.size(); ++i)
 	{
-		Float temp = Points[i].y;
+		Float temp = Points[i].y();
 		for (int j = 0; j < Points.size(); ++j)
 		{
 			if (j != i)
 			{
-				temp *= (in_val - Points[j].x) / (Points[i].x - Points[j].x);
+				temp *= (in_val - Points[j].x()) / (Points[i].x() - Points[j].x());
 			}
 		}
 		rst += temp;
@@ -88,13 +88,13 @@ inline void NewtonPolynomial::evaluate()
 	coeff.resize(Points.size());
 	for (int i = 0; i < coeff.size(); ++i)
 	{
-		coeff[i] = Points[i].y;
+		coeff[i] = Points[i].y();
 	}
 	for (int i = 1; i < Points.size(); ++i)
 	{
 		for (int j = Points.size() - 1; j >= i; --j)
 		{
-			coeff[j] = (coeff[j] - coeff[j - 1]) / (Points[j].x - Points[j - i].x);
+			coeff[j] = (coeff[j] - coeff[j - 1]) / (Points[j].x() - Points[j - i].x());
 		}
 	}
 }
@@ -107,7 +107,7 @@ inline Float NewtonPolynomial::operator()(Float in_val)
 		Float temp = coeff[i];
 		for (int j = 0; j < i; ++j)
 		{
-			temp *= (in_val - Points[j].x);
+			temp *= (in_val - Points[j].x());
 		}
 		rst += temp;
 	}

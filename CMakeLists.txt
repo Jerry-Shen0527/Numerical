@@ -8,23 +8,27 @@ include(cmake/InitUCMake.cmake)
 Ubpa_InitUCMake()
 Ubpa_InitProject()
 
+find_package(Vulkan REQUIRED FATAL_ERROR)
+find_package(glfw3 REQUIRED FATAL_ERROR)
 
-message(STATUS "find package: glm")
-find_package(glm QUIET)
-if(NOT GLM_FOUND)
-  message(STATUS "Building glm")
-  set(_address "https://github.com/Jerry-Shen0527/glm.git")
+
+message(STATUS "find package: eigen")
+find_package(Eigen3 QUIET)
+if(NOT Eigen3_FOUND)
+  message(STATUS "Building Eigen")
+  set(_address "https://gitlab.com/libeigen/eigen.git")
   message(STATUS "fetch: ${_address}")
   FetchContent_Declare(
-    glm
+    eigen3
     GIT_REPOSITORY ${_address}
   )
-  FetchContent_MakeAvailable(glm)
-  message(STATUS "glm build done")
+  FetchContent_MakeAvailable(eigen3)
+  message(STATUS "Eigen3 build done")
 endif()
 
-message("glm is at ${glm_SOURCE_DIR}")
-include_directories(${glm_SOURCE_DIR})
+message("eigen3 is at ${Eigen3_SOURCE_DIR}")
 include_directories(${PROJECT_SOURCE_DIR}/include)
+include_directories(${Eigen3_SOURCE_DIR})
+include_directories(${Vulkan_INCLUDE_DIRS})
 
 Ubpa_AddSubDirsRec(src)
