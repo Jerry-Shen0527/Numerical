@@ -1744,6 +1744,16 @@ void ShowDemoWindow(bool* p_open) {
     ImGui::Spacing();
 
     if (ImGui::BeginTabBar("ImPlotDemoTabs")) {
+        if (ImGui::BeginTabItem("Homework1"))
+        {
+            if (ImGui::CollapsingHeader("Polynomial"))
+                ShowDemo_LinePlots();
+            if (ImGui::CollapsingHeader("Radial Function"))
+                ShowDemo_FilledLinePlots();
+
+
+            ImGui::EndTabItem();
+        }
         if (ImGui::BeginTabItem("Plots")) {
             if (ImGui::CollapsingHeader("Line Plots"))
                 ShowDemo_LinePlots();

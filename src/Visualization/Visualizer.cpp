@@ -1,4 +1,3 @@
-
 // Dear ImGui: standalone example application for Glfw + Vulkan
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
@@ -23,7 +22,6 @@
 #include "imgui/implot.h"
 
 #include "Visualization/Visualizer.h"
-
 
 // [Win32] Our example includes a copy of glfw3.lib pre-compiled with VS2010 to maximize ease of testing and compatibility with old VS compilers.
 // To link with VS2010-era libraries, VS2015+ requires linking with legacy_stdio_definitions.lib, which we do using this pragma.
@@ -400,41 +398,11 @@ void Visualizer::RenderLoop()
 		ImGui::NewFrame();
 
 		// 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-		if (show_demo_window)
-			ImPlot::ShowDemoWindow(&show_demo_window);
-
-		//// 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-		//{
-		//	static float f = 0.0f;
-		//	static int counter = 0;
-
-		//	ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-		//	ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		//	ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-		//	ImGui::Checkbox("Another Window", &show_another_window);
-
-		//	ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		//	ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-		//	if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-		//		counter++;
-		//	ImGui::SameLine();
-		//	ImGui::Text("counter = %d", counter);
-
-		//	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-		//	ImGui::End();
-		//}
-
-		//// 3. Show another simple window.
-		//if (show_another_window)
-		//{
-		//	ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-		//	ImGui::Text("Hello from another window!");
-		//	if (ImGui::Button("Close Me"))
-		//		show_another_window = false;
-		//	ImGui::End();
-		//}
+		if (show)
+		{
+			drawDefault(&show);
+			draw(&show);
+		}
 
 		// Rendering
 		ImGui::Render();
@@ -557,7 +525,7 @@ void Visualizer::initWindow()
 	}
 
 	// Our state
-	show_demo_window = true;
+	show = true;
 	bool show_another_window = false;
 	clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 }
@@ -578,4 +546,54 @@ void Visualizer::cleanUp()
 
 	glfwDestroyWindow(window);
 	glfwTerminate();
+}
+
+void Visualizer::drawDefault(bool* p_open)
+{
+	static bool show_imgui_metrics = false;
+	static bool show_implot_metrics = false;
+	static bool show_imgui_style_editor = false;
+	static bool show_implot_style_editor = false;
+	if (show_imgui_metrics) {
+		ImGui::ShowMetricsWindow(&show_imgui_metrics);
+	}
+	if (show_implot_metrics) {
+		ImPlot::ShowMetricsWindow(&show_implot_metrics);
+	}
+	if (show_imgui_style_editor) {
+		ImGui::Begin("Style Editor (ImGui)", &show_imgui_style_editor);
+		ImGui::ShowStyleEditor();
+		ImGui::End();
+	}
+	if (show_implot_style_editor) {
+		ImGui::SetNextWindowSize(ImVec2(415, 762), ImGuiCond_Appearing);
+		ImGui::Begin("Style Editor (ImPlot)", &show_implot_style_editor);
+		ImPlot::ShowStyleEditor();
+		ImGui::End();
+	}
+
+	ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(600, 750), ImGuiCond_FirstUseEver);
+	ImGui::Begin("ImPlot Demo", p_open, ImGuiWindowFlags_MenuBar);
+	if (ImGui::BeginMenuBar()) {
+		if (ImGui::BeginMenu("Tools")) {
+			ImGui::MenuItem("Metrics (ImGui)", NULL, &show_imgui_metrics);
+			ImGui::MenuItem("Metrics (ImPlot)", NULL, &show_implot_metrics);
+			ImGui::MenuItem("Style Editor (ImGui)", NULL, &show_imgui_style_editor);
+			ImGui::MenuItem("Style Editor (ImPlot)", NULL, &show_implot_style_editor);
+			ImGui::EndMenu();
+		}
+		ImGui::EndMenuBar();
+	}
+	//-------------------------------------------------------------------------
+	ImGui::Text("ImPlot says hello. (%s)", IMPLOT_VERSION);
+	// display warning about 16-bit indices
+	static bool showWarning = sizeof(ImDrawIdx) * 8 == 16 && (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset) == false;
+	if (showWarning) {
+		ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 0, 1));
+		ImGui::TextWrapped("WARNING: ImDrawIdx is 16-bit and ImGuiBackendFlags_RendererHasVtxOffset is false. Expect visual glitches and artifacts! See README for more information.");
+		ImGui::PopStyleColor();
+	}
+
+	ImGui::Spacing();
 }

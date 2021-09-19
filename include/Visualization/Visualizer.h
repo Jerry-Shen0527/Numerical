@@ -16,13 +16,13 @@ public:
 protected:
 	void initWindow();
 	void cleanUp();
+	void drawDefault(bool* p_open);
 
-	virtual void draw()
-	{
-	}
+
+	virtual void draw(bool* p_open) = 0;
 
 private:
-	bool show_demo_window;
+	bool show;
 	GLFWwindow* window;
 	ImGui_ImplVulkanH_Window* wd;
 	ImVec4 clear_color;
