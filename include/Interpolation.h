@@ -22,6 +22,34 @@ protected:
 	std::vector<Point2> Points;
 };
 
+class RadialInterpolation : public Interpolation
+{
+public:
+	Result error_bound(Float& error_b) override;
+
+	void evaluate() override
+	{
+		auto size = Points.size();
+		matrix = Eigen::MatrixXd(size, size);
+
+		Eigen::VectorXd b(size);
+
+		rst = matrix.ldlt().solve(b);
+	}
+
+	Float operator()(Float in_val) override
+	{
+	}
+
+	Float radial(Float x, Float center, Float d)
+	{
+		return 1.0 / ((x - center) * (x - center) + d);
+	}
+
+	Eigen::MatrixXd matrix;
+	Eigen::VectorXd rst;
+};
+
 class LagrangianPolynomial : public Interpolation
 {
 public:

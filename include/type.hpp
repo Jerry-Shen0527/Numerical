@@ -5,4 +5,4 @@
 
 using Float = double;
 
-using Point2 = Eigen::Vector2f;
+using Point2 = Eigen::Vector2d;

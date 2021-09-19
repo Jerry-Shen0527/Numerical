@@ -10,51 +10,76 @@
 class InterpolationVisualizer :public Visualizer
 {
 protected:
+	void AddPoint();
+	void DragPoint();
 	void draw(bool* p_open) override;
-public:
-};
 
-void DrawPolynomial()
-{
-	static float xs1[1001], ys1[1001];
-	for (int i = 0; i < 1001; ++i) {
-		xs1[i] = i * 0.001f;
-		ys1[i] = 0.5f + 0.5f * sinf(50 * (xs1[i] + (float)ImGui::GetTime() / 10));
+	std::vector<Point2> points;
+	bool updated = true;
+
+	void evaluate_lagrangian()
+	{
+		LagrangianPolynomial lagrangian(points);
+		lagrangian.evaluate();
+		for (int i = 0; i < Length; ++i)
+		{
+			ys[i] = lagrangian(xs[i]);
+		}
 	}
-	static double xs2[11], ys2[11];
-	for (int i = 0; i < 11; ++i) {
-		xs2[i] = i * 0.1f;
-		ys2[i] = xs2[i] * xs2[i];
+
+public:
+	InterpolationVisualizer() {
+		for (int i = 0; i < Length; ++i)
+		{
+			xs[i] = i;
+		}
 	}
-	ImGui::BulletText("Anti-aliasing can be enabled from the plot's context menu (see Help).");
-	if (ImPlot::BeginPlot("Line Plot", "x", "f(x)")) {
-		ImPlot::PlotLine("sin(x)", xs1, ys1, 1001);
-		ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
-		ImPlot::PlotLine("x^2", xs2, ys2, 11);
-		ImPlot::EndPlot();
-	}
-}
+	const float Length = 1001;
+
+	std::vector<float> xs = std::vector<float>(Length);
+	std::vector<float> ys = std::vector<float>(Length);
+};
 
 void DrawRadial()
 {
 }
 
+void InterpolationVisualizer::AddPoint()
+{
+	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+	{
+		auto pos = ImPlot::GetPlotMousePos();
+		points.emplace_back(pos.x, pos.y);
+		updated = true;
+	}
+}
+
+void InterpolationVisualizer::DragPoint()
+{
+	for (int i = 0; i < points.size(); ++i)
+	{
+		auto& point = points[i];
+		updated |= ImPlot::DragPoint(("Point " + std::to_string(i)).c_str(), &point.x(), &point.y());
+	}
+}
+
 void InterpolationVisualizer::draw(bool* p_open)
 {
-	if (ImGui::BeginTabBar("ImPlotDemoTabs")) {
-		if (ImGui::BeginTabItem("Homework1"))
+	if (updated)
+	{
+		evaluate_lagrangian();
+		updated = false;
+	}
+	if (ImGui::BeginTabBar("Homework 1")) {
+		if (ImGui::BeginTabItem("Interpolation"))
 		{
-			if (ImGui::CollapsingHeader("DrawPolynomial"))
-				DrawPolynomial();
-			if (ImGui::CollapsingHeader("Filled Line Plots"))
-				DrawRadial();
+			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail(), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
+				ImPlot::PlotLine("sin(x)", &xs[0], &ys[0], Length);
+				AddPoint();
+				DragPoint();
+				ImPlot::EndPlot();
+			}
 
-			ImGui::EndTabItem();
-		}
-
-		if (ImGui::BeginTabItem("DrawPolynomial"))
-		{
-			DrawPolynomial();
 			ImGui::EndTabItem();
 		}
 
@@ -65,19 +90,6 @@ void InterpolationVisualizer::draw(bool* p_open)
 
 int main()
 {
-	//std::vector<Point2> points;
-	//points.emplace_back(0, 0);
-	//points.emplace_back(1, 1);
-	//points.emplace_back(2, 2);
-	//points.emplace_back(33, 3);
-	//points.emplace_back(4, 48);
-
-	//NewtonPolynomial newton(points);
-	//LagrangianPolynomial lagrangian(points);
-	//newton.evaluate();
-	//lagrangian.evaluate();
-	//std::cout << newton(0.6);
-
 	InterpolationVisualizer visualizer;
 	visualizer.RenderLoop();
 }

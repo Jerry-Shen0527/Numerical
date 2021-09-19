@@ -94,7 +94,7 @@ ImPlotContext* GImPlot = NULL;
 //-----------------------------------------------------------------------------
 
 ImPlotInputMap::ImPlotInputMap() {
-    PanButton             = ImGuiMouseButton_Left;
+    PanButton             = ImGuiMouseButton_Middle;
     PanMod                = ImGuiKeyModFlags_None;
     FitButton             = ImGuiMouseButton_Left;
     ContextMenuButton     = ImGuiMouseButton_Right;

@@ -586,7 +586,6 @@ void Visualizer::drawDefault(bool* p_open)
 		ImGui::EndMenuBar();
 	}
 	//-------------------------------------------------------------------------
-	ImGui::Text("ImPlot says hello. (%s)", IMPLOT_VERSION);
 	// display warning about 16-bit indices
 	static bool showWarning = sizeof(ImDrawIdx) * 8 == 16 && (ImGui::GetIO().BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset) == false;
 	if (showWarning) {
@@ -595,5 +594,4 @@ void Visualizer::drawDefault(bool* p_open)
 		ImGui::PopStyleColor();
 	}
 
-	ImGui::Spacing();
 }
