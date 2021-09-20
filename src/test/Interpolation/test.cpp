@@ -21,9 +21,13 @@ protected:
 	{
 		LagrangianPolynomial lagrangian(points);
 		lagrangian.evaluate();
+
+		RadialInterpolation radial(points);
+		radial.evaluate();
 		for (int i = 0; i < Length; ++i)
 		{
-			ys[i] = lagrangian(xs[i]);
+			ys1[i] = lagrangian(xs[i]);
+			ys2[i] = radial(xs[i]);
 		}
 	}
 
@@ -37,7 +41,8 @@ public:
 	const float Length = 1001;
 
 	std::vector<float> xs = std::vector<float>(Length);
-	std::vector<float> ys = std::vector<float>(Length);
+	std::vector<float> ys1 = std::vector<float>(Length);
+	std::vector<float> ys2 = std::vector<float>(Length);
 };
 
 void DrawRadial()
@@ -74,9 +79,12 @@ void InterpolationVisualizer::draw(bool* p_open)
 		if (ImGui::BeginTabItem("Interpolation"))
 		{
 			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail(), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
-				ImPlot::PlotLine("sin(x)", &xs[0], &ys[0], Length);
+				ImPlot::PlotLine("Polynomial", &xs[0], &ys1[0], Length);
 				AddPoint();
 				DragPoint();
+
+				ImPlot::PlotLine("Radial", &xs[0], &ys2[0], Length);
+
 				ImPlot::EndPlot();
 			}
 

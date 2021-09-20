@@ -10,7 +10,7 @@ enum class Result
 class Interpolation
 {
 public:
-	Interpolation(const std::vector<Point2>& points) :Points(points) {}
+	Interpolation(const std::vector<Point2>& points) :Points(points) {  }
 
 	virtual Result error_bound(Float& error_b) = 0;
 
@@ -25,20 +25,70 @@ protected:
 class RadialInterpolation : public Interpolation
 {
 public:
-	Result error_bound(Float& error_b) override;
+	using Interpolation::Interpolation;
+
+	Result error_bound(Float& error_b) override { return Result::NotAvailable; }
 
 	void evaluate() override
 	{
-		auto size = Points.size();
-		matrix = Eigen::MatrixXd(size, size);
+		if (!Points.empty())
+		{
+			if (Points.size() > 1)
+			{
+				auto iter_max = std::max_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() > b.x(); });
+				auto iter_min = std::min_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() > b.x(); });
+				d = (iter_max->x() - iter_min->x()) / Points.size();
+				d = d * d;
+			}
 
-		Eigen::VectorXd b(size);
+			Float a = 0;
+			for (int i = 0; i < Points.size(); ++i)
+			{
+				a += Points[i].y();
+			}
+			a /= Points.size();
+			ave = a;
+		}
 
-		rst = matrix.ldlt().solve(b);
+		if (!Points.empty())
+		{
+			auto size = Points.size();
+			matrix = Eigen::MatrixXd(size, size);
+
+			Eigen::VectorXd b(size);
+			for (int i = 0; i < size; ++i)
+			{
+				b[i] = Points[i].y() - ave;
+			}
+
+			for (int i = 0; i < size; ++i)
+			{
+				for (int j = 0; j < size; ++j)
+				{
+					matrix(i, j) = radial(Points[i].x(), Points[j].x(), d);
+				}
+			}
+
+			rst = matrix.ldlt().solve(b);
+		}
 	}
 
 	Float operator()(Float in_val) override
 	{
+		if (Points.empty())
+		{
+			return 0;
+		}
+		else
+		{
+			Float ret = ave;
+			for (int i = 0; i < Points.size(); ++i)
+			{
+				ret += rst[i] * radial(in_val, Points[i].x(), d);
+			}
+
+			return ret;
+		}
 	}
 
 	Float radial(Float x, Float center, Float d)
@@ -48,6 +98,8 @@ public:
 
 	Eigen::MatrixXd matrix;
 	Eigen::VectorXd rst;
+	Float ave;
+	Float d = 1;
 };
 
 class LagrangianPolynomial : public Interpolation
