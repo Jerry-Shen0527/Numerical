@@ -2,14 +2,15 @@
 #include <type.hpp>
 #include <functional>
 #include "Eigen/Eigen"
-class FEM
+class StaticFEM
 {
 public:
-	virtual ~FEM() {}
+	virtual ~StaticFEM() {}
 
 	virtual void evaluate()
 	{
 		FillMatrix();
+
 		FillRhs();
 
 		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
@@ -25,16 +26,22 @@ protected:
 	virtual void FillMatrix() = 0;
 	virtual void FillRhs() = 0;
 
+	virtual Float GradientInnerProduct(int i, int j) = 0;
+	virtual Float RHSInnerProduct(int i) = 0;
+	virtual std::vector<int> RelatedFuncIdx(int idx) = 0;
+
+	size_t size;
+
 	Eigen::SparseMatrix<Float> matrix_;
 	Eigen::VectorXd rhs;
 	Eigen::VectorXd rst;
 };
 
-class StaticFEM1D	 :public FEM
+class StaticFEM1D :public StaticFEM
 {
 protected:
 	void FillMatrix() override;
 	void FillRhs() override;
 public:
-
+	std::function<Float(Float)> Function;
 };
