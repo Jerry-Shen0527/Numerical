@@ -44,4 +44,5 @@ protected:
 	void FillRhs() override;
 public:
 	std::function<Float(Float)> Function;
+	virtual Float Value(Float x) = 0;
 };
