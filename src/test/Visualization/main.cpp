@@ -12,6 +12,9 @@ void p_Visualizer::draw(bool* p_open)
 		if (ImGui::BeginTabItem("Homework1"))
 		{
 			ImGui::EndTabItem();
+		}		if (ImGui::BeginTabItem("Homework2"))
+		{
+			ImGui::EndTabItem();
 		}
 
 		ImGui::EndTabBar();

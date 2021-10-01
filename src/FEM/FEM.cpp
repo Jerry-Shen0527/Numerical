@@ -14,6 +14,8 @@ void StaticFEM1D::FillMatrix()
 	}
 	matrix_ = Eigen::SparseMatrix<Float>(size, size);
 	matrix_.setFromTriplets(triplets.begin(), triplets.end());
+
+	//std::cout << matrix_ << std::endl << std::endl;
 }
 
 void StaticFEM1D::FillRhs()

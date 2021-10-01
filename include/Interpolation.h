@@ -35,8 +35,8 @@ public:
 		{
 			if (Points.size() > 1)
 			{
-				auto iter_max = std::max_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() > b.x(); });
-				auto iter_min = std::min_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() > b.x(); });
+				auto iter_max = std::max_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+				auto iter_min = std::min_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
 				d = (iter_max->x() - iter_min->x()) / Points.size();
 				d = d * d;
 			}

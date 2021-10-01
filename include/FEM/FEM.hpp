@@ -13,13 +13,13 @@ public:
 
 		FillRhs();
 
-		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
+		Eigen::SimplicialLLT<Eigen::SparseMatrix<Float>> solver;
 
 		solver.compute(matrix_);
 		rst = solver.solve(rhs);
 	}
 
-	Eigen::VectorXd coeff_() { return rst; }
+	Eigen::VectorXd& coeff_() { return rst; }
 
 protected:
 	//This is a premature design of interfaces, which might be refactored in large scale
