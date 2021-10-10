@@ -3,53 +3,57 @@
 
 #include <Eigen/Eigen>
 
-#include "Geometry/ParameterDesign/Interpolation.h"
+#include "Geometry/ParameterDesign/Bezier.hpp"
 #include "imgui/implot.h"
 #include "Visualization/Visualizer.h"
 
-class InterpolationVisualizer :public Visualizer
+class BezierVisualizer :public Visualizer
 {
 protected:
 	void AddPoint();
 	void DragPoint();
+
 	void draw(bool* p_open) override;
 
 	std::vector<Point2> points;
 	bool updated = true;
 
-	void evaluate_lagrangian()
+	void evaluate_bezier()
 	{
-		LagrangianPolynomial lagrangian(points);
-		lagrangian.evaluate();
-
-		RadialInterpolation radial(points);
-		radial.evaluate();
+		Bezier bezier(points);
 		for (int i = 0; i < Length; ++i)
 		{
-			ys1[i] = lagrangian(xs[i]);
-			ys2[i] = radial(xs[i]);
+			xs[i] = bezier(ctr_points[i]).x();
+			ys[i] = bezier(ctr_points[i]).y();
+		}
+		ctr_xs.resize(points.size());
+		ctr_ys.resize(points.size());
+
+		for (int i = 0; i < points.size(); ++i)
+		{
+			ctr_xs[i] = points[i].x();
+			ctr_ys[i] = points[i].y();
 		}
 	}
 
 public:
-	InterpolationVisualizer() {
+	BezierVisualizer() {
 		for (int i = 0; i < Length; ++i)
 		{
-			xs[i] = i;
+			ctr_points[i] = Float(i) / (Length - 1);
 		}
 	}
 	const float Length = 1001;
 
+	std::vector<float> ctr_points = std::vector<float>(Length);
 	std::vector<float> xs = std::vector<float>(Length);
-	std::vector<float> ys1 = std::vector<float>(Length);
-	std::vector<float> ys2 = std::vector<float>(Length);
+	std::vector<float> ys = std::vector<float>(Length);
+
+	std::vector<float> ctr_xs = std::vector<float>(0);
+	std::vector<float> ctr_ys = std::vector<float>(0);
 };
 
-void DrawRadial()
-{
-}
-
-void InterpolationVisualizer::AddPoint()
+void BezierVisualizer::AddPoint()
 {
 	if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 	{
@@ -59,7 +63,7 @@ void InterpolationVisualizer::AddPoint()
 	}
 }
 
-void InterpolationVisualizer::DragPoint()
+void BezierVisualizer::DragPoint()
 {
 	for (int i = 0; i < points.size(); ++i)
 	{
@@ -68,22 +72,24 @@ void InterpolationVisualizer::DragPoint()
 	}
 }
 
-void InterpolationVisualizer::draw(bool* p_open)
+void BezierVisualizer::draw(bool* p_open)
 {
 	if (updated)
 	{
-		evaluate_lagrangian();
+		evaluate_bezier();
 		updated = false;
 	}
 	if (ImGui::BeginTabBar("Homework 1")) {
 		if (ImGui::BeginTabItem("Interpolation"))
 		{
 			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail(), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
-				ImPlot::PlotLine("Polynomial", &xs[0], &ys1[0], Length);
+				ImPlot::PlotLine("Bezier", &xs[0], &ys[0], Length);
+				if (!ctr_xs.empty())
+				{
+					ImPlot::PlotLine("ControlBox", &ctr_xs[0], &ctr_ys[0], ctr_xs.size());
+				}
 				AddPoint();
 				DragPoint();
-
-				ImPlot::PlotLine("Radial", &xs[0], &ys2[0], Length);
 
 				ImPlot::EndPlot();
 			}
@@ -98,6 +104,6 @@ void InterpolationVisualizer::draw(bool* p_open)
 
 int main()
 {
-	InterpolationVisualizer visualizer;
+	BezierVisualizer visualizer;
 	visualizer.RenderLoop();
 }

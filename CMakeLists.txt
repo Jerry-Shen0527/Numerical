@@ -26,6 +26,21 @@ if(NOT Eigen3_FOUND)
   message(STATUS "Eigen3 build done")
 endif()
 
+
+message(STATUS "find package: assimp")
+find_package(Assimp QUIET)
+if(NOT Assimp_FOUND)
+  message(STATUS "Building Assimp")
+  set(_address "https://github.com/assimp/assimp.git")
+  message(STATUS "fetch: ${_address}")
+  FetchContent_Declare(
+    assimp
+    GIT_REPOSITORY ${_address}
+  )
+  FetchContent_MakeAvailable(assimp)
+  message(STATUS "Eigen3 build done")
+endif()
+
 message("eigen3 is at ${Eigen3_SOURCE_DIR}")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${Eigen3_SOURCE_DIR})
