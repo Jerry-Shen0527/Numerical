@@ -20,7 +20,8 @@ protected:
 
 	void evaluate_bezier()
 	{
-		Bezier bezier(points);
+		BezierBernstein bezier(points);
+		//Bezier bezier(points);
 		for (int i = 0; i < Length; ++i)
 		{
 			xs[i] = bezier(ctr_points[i]).x();
@@ -79,7 +80,7 @@ void BezierVisualizer::draw(bool* p_open)
 		evaluate_bezier();
 		updated = false;
 	}
-	if (ImGui::BeginTabBar("Homework 1")) {
+	if (ImGui::BeginTabBar("Homework 2")) {
 		if (ImGui::BeginTabItem("Interpolation"))
 		{
 			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail(), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {

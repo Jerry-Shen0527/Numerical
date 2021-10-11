@@ -328,8 +328,6 @@ public:
 			linear_vec_L_inf.push_back(L_inf);
 			error(precise_val, quadratic_val, L1, L2, L_inf);
 
-			//std::cout <<"Quadra"<< L1 << '&' << L2 << '&' << L_inf << '&' << std::endl;
-
 			quadratic_vec_L_1.push_back(L1);
 			quadratic_vec_L_2.push_back(L2);
 			quadratic_vec_L_inf.push_back(L_inf);
