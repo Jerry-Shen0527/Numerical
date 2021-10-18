@@ -30,9 +30,8 @@ static Float LinearFunc(Float x, Float x0, Float x_left, Float x_right)
 class LinearBaseFEM1D :public StaticFEM1D
 {
 public:
-	LinearBaseFEM1D(size_t size)
+	LinearBaseFEM1D(size_t size) : StaticFEM1D(size)
 	{
-		this->size = size;
 		mesh.resize(size);
 		//A default devision is provided
 		Float h = 1.0 / (size + 1);
@@ -41,12 +40,13 @@ public:
 			mesh[i] = (i + 1) * h;
 		}
 	}
+
 	std::vector<Float> mesh;
 
 	Float Value(Float x) override
 	{
 		Float ret = 0;
-		for (int i = 0; i < size; ++i)
+		for (int i = 0; i < mat_size; ++i)
 		{
 			ret += LinearFunc(x, MeshValue(i), MeshValue(i - 1), MeshValue(i + 1)) * coeff_()(i);
 		}
@@ -61,11 +61,11 @@ private:
 		std::vector<int> ret;
 		ret.push_back(idx);
 		int left = idx - 1, right = idx + 1;
-		if (0 <= left && left < size)
+		if (0 <= left && left < mat_size)
 		{
 			ret.push_back(left);
 		}
-		if (0 <= right && right < size)
+		if (0 <= right && right < mat_size)
 		{
 			ret.push_back(right);
 		}
@@ -78,7 +78,7 @@ private:
 		{
 			return 0;
 		}
-		if (index >= size)
+		if (index >= mat_size)
 		{
 			return  1.0;
 		}
@@ -101,6 +101,17 @@ private:
 	Float RHSInnerProduct(int i) override
 	{
 		return LinearInnerProduct(MeshValue(i - 1), MeshValue(i), MeshValue(i + 1));
+	}
+
+protected:
+	Float SelfInnerProduct(int i, int j) override
+	{
+		return 0;
+	}
+
+	Float GradientSelfInnerProduct(int i, int j) override
+	{
+		return 0;
 	}
 };
 
@@ -144,9 +155,8 @@ static Float QuadraticGradientInnerProduct(Float xmin, Float xmid, Float xmax, F
 class QuadraticBaseFEM1D :public StaticFEM1D
 {
 public:
-	QuadraticBaseFEM1D(size_t size) :mesh_size(size)
+	QuadraticBaseFEM1D(size_t size) : StaticFEM1D(2 * size + 1), mesh_size(size)
 	{
-		this->size = 2 * size + 1;
 		mesh.resize(size);
 		//A default division is provided
 		Float h = 1.0 / (size + 1);
@@ -155,13 +165,14 @@ public:
 			mesh[i] = (i + 1) * h;
 		}
 	}
+
 	std::vector<Float> mesh;
 	size_t mesh_size;
 
 	Float Value(Float x) override
 	{
 		Float ret = 0;
-		for (int i = 0; i < size; ++i)
+		for (int i = 0; i < mat_size; ++i)
 		{
 			Float xmin, xmid, xmax;
 			idx_to_mesh(i, xmin, xmid, xmax);
@@ -254,6 +265,17 @@ private:
 
 		idx_to_mesh(i, xmin, xmid, xmax);
 		return QuadraticInnerProduct(xmin, xmid, xmax);
+	}
+
+protected:
+	Float SelfInnerProduct(int i, int j) override
+	{
+		return 0;
+	}
+
+	Float GradientSelfInnerProduct(int i, int j) override
+	{
+		return 0;
 	}
 };
 

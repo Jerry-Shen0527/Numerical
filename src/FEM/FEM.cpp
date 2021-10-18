@@ -3,25 +3,24 @@
 void StaticFEM1D::FillMatrix()
 {
 	std::vector<Eigen::Triplet<Float>> triplets;
-	for (int i = 0; i < size; ++i)
+	for (int i = 0; i < mat_size; ++i)
 	{
 		auto related_vec = RelatedFuncIdx(i);
 
 		for (int j : related_vec)
 		{
 			triplets.emplace_back(i, j, GradientInnerProduct(i, j));
+			triplets.emplace_back(i, j, SelfInnerProduct(i, j));
 		}
 	}
-	matrix_ = Eigen::SparseMatrix<Float>(size, size);
+	matrix_ = Eigen::SparseMatrix<Float>(mat_size, mat_size);
 	matrix_.setFromTriplets(triplets.begin(), triplets.end());
-
-	//std::cout << matrix_ << std::endl << std::endl;
 }
 
 void StaticFEM1D::FillRhs()
 {
-	rhs = Eigen::VectorXd(size);
-	for (int i = 0; i < size; ++i)
+	rhs = Eigen::VectorXd(mat_size);
+	for (int i = 0; i < mat_size; ++i)
 	{
 		rhs(i) = RHSInnerProduct(i);
 	}

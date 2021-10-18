@@ -5,6 +5,11 @@
 class StaticFEM
 {
 public:
+	explicit StaticFEM(size_t size)
+		: mat_size(size)
+	{
+	}
+
 	virtual ~StaticFEM() {}
 
 	virtual void evaluate()
@@ -27,10 +32,11 @@ protected:
 	virtual void FillRhs() = 0;
 
 	virtual Float GradientInnerProduct(int i, int j) = 0;
+	virtual Float SelfInnerProduct(int i, int j) = 0;
 	virtual Float RHSInnerProduct(int i) = 0;
 	virtual std::vector<int> RelatedFuncIdx(int idx) = 0;
 
-	size_t size;
+	size_t mat_size;
 
 	Eigen::SparseMatrix<Float> matrix_;
 	Eigen::VectorXd rhs;
@@ -40,9 +46,12 @@ protected:
 class StaticFEM1D :public StaticFEM
 {
 protected:
+	StaticFEM1D(size_t mat_size) : StaticFEM(mat_size)
+	{
+	}
+
 	void FillMatrix() override;
 	void FillRhs() override;
 public:
-	std::function<Float(Float)> Function;
 	virtual Float Value(Float x) = 0;
 };
