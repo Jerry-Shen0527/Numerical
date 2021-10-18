@@ -191,8 +191,8 @@ public:
 		: StaticFEM1DApp(segment, rhs_func, d_func, c_func, interval)
 	{
 		mat_size = 2 * segment - 1;
-		ShapeFunctions = { [](Float x) {return x * (x - 0.5) * 2; },[](Float x) {return x * (x - 1.0) * 4; },[](Float x) {return (x - 1) * (x - 0.5) * 2; } };
-		ShapeFunctionGradients = { [](Float x) {return -1 + 4 * x; },[](Float x) {return -4 + 8 * x; } ,[](Float x) {return  4 * x - 3; } };
+		ShapeFunctions = { [](Float x) {return x * (x - 0.5) * 2; },[](Float x) {return -x * (x - 1.0) * 4; },[](Float x) {return (x - 1) * (x - 0.5) * 2; } };
+		ShapeFunctionGradients = { [](Float x) {return -1 + 4 * x; },[](Float x) {return 4 - 8 * x; } ,[](Float x) {return  4 * x - 3; } };
 	}
 
 protected:
@@ -223,6 +223,44 @@ protected:
 	}
 };
 
+std::function<Float(Float)> LagrangianBase(int N, int i)
+{
+	std::vector<Point2> points(N + 1);
+	Float h = 1.0 / N;
+	for (int i = 0; i <= N; ++i)
+	{
+		points[i] = Point2(i * h, 0);
+	}
+	points[i] = Point2(i * h, 1.0);
+	return LagrangianPolynomial(points);
+}
+
+std::function<Float(Float)> LagrangianBaseDerivative(int N, int i)
+{
+	return [=](Float x)
+	{
+		Float ret=0;
+		for (int missing = 0; missing <= N; ++missing)
+		{
+			if (missing != i)
+			{
+				std::vector<Point2> points;
+				Float h = 1.0 / N;
+
+				for (int j = 0; j <= N; ++j)
+					if (j != missing)
+						if (j == i)
+							points.emplace_back(j * h, 1.0);
+						else
+							points.emplace_back(j * h, 0.0);
+
+				ret += LagrangianPolynomial(points)(x) / (h * (i - missing));
+			}
+		}
+		return ret;
+	};
+}
+
 template<int N>
 class PolynomialFEMApp :public StaticFEM1DApp
 {
@@ -234,19 +272,11 @@ public:
 	{
 		static_assert(N > 0);
 		mat_size = N * segment - 1;
-		std::vector<Point2> points(N + 1);
-		Float h = 1.0 / N;
+
 		for (int i = 0; i <= N; ++i)
 		{
-			points[i] = Point2(i * h, 0);
-		}
-
-		for (int i = 0; i < N; ++i)
-		{
-			points[i] = Point2(i * h, 1.0);
-			LagrangianPolynomial lagrangian(points);
-			ShapeFunctions.push_back(lagrangian);
-			points[i] = Point2(i * h, 0.0);
+			ShapeFunctions.push_back(LagrangianBase(N, i));
+			ShapeFunctionGradients.push_back(LagrangianBaseDerivative(N, i));
 		}
 	}
 
@@ -269,23 +299,17 @@ protected:
 	{
 		int segement_ = segemnt;
 
-		auto rhs = [](Float x) {return  (-1 + x) * (Power(-1 + x, 2) * (1 + Power(x, 2)) *
-			Power(Sin(x), 2) -
-			(-1 + x) * Cos(x) * Sin(x) *
-			(2 * (-1 + x) * Cos(x) + 3 * Sin(x)) -
-			(2 + Sin(x)) * (3 +
-				(-1 - 4 * x + 2 * Power(x, 2)) * Cos(2 * x) +
-				6 * (-1 + x) * Sin(2 * x))); };
+		auto rhs = [](Float x) {return  -4 - x + Power(x, 2) - Power(x, 3) + Power(x, 4) + Cos(x) - 2 * x * Cos(x) - 2 * Sin(x); };
 		auto a = [](Float x) {return sin(x) + 2; };
 		auto c = [](Float x) {return x * x + 1; };
 
 		LinearFEMApp linear(segement_, rhs, a, c, Interval(0.0, 1.0));
-		QuadraticFEMApp quadratic(segement_, rhs, a, c, Interval(0.0, 1.0));
+		//QuadraticFEMApp quadratic(segement_, rhs, a, c, Interval(0.0, 1.0));
 		linear.evaluate();
-		quadratic.evaluate();
+		//quadratic.evaluate();
 		for (int i = 0; i < Length; ++i)
 		{
-			quadratic_val[i] = quadratic.Value(1.0 / (Length - 1) * i);
+			//quadratic_val[i] = quadratic.Value(1.0 / (Length - 1) * i);
 			linear_val[i] = linear.Value(1.0 / (Length - 1) * i);
 
 			quadratic_diff[i] = quadratic_val[i] - precise_val[i];
@@ -322,7 +346,7 @@ public:
 		{
 			xs[i] = i * h;
 			rhs_f[i] = (xs[i] - 1) * sin(xs[i]);
-			auto accurate_func = [](Float x) {return (x - 1) * ((x - 1)) * (x - 1) * sin(x) * sin(x); };
+			auto accurate_func = [](Float x) {return (-1 + x) * x; };
 			precise_val[i] = accurate_func(xs[i]);
 		}
 		segemnt = 2;
@@ -433,8 +457,13 @@ void FEM1DVisualizer::draw(bool* p_open)
 	ImGui::End();
 }
 
+//int main()
+//{
+//	FEM1DVisualizer visualizer;
+//	visualizer.RenderLoop();
+//}
+
 int main()
 {
-	FEM1DVisualizer visualizer;
-	visualizer.RenderLoop();
+	std::cout<<LagrangianBaseDerivative(2, 0)(0);
 }

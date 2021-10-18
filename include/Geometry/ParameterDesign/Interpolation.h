@@ -120,6 +120,10 @@ inline Float LagrangianPolynomial::operator()(Float in_val)
 	for (int i = 0; i < Points.size(); ++i)
 	{
 		Float temp = Points[i].y();
+		if (temp == 0.0)
+		{
+			continue;
+		}
 		for (int j = 0; j < Points.size(); ++j)
 		{
 			if (j != i)
