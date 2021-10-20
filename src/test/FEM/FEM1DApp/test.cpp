@@ -152,77 +152,6 @@ public:
 	Interval interval;
 };
 
-class LinearFEMApp :public StaticFEM1DApp
-{
-public:
-	LinearFEMApp(int segment, const std::function<Float(Float)>& rhs_func, const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& c_func,
-		const Interval& interval)
-		: StaticFEM1DApp(segment, rhs_func, d_func, c_func, interval)
-	{
-		mat_size = segment - 1;
-		ShapeFunctions = { [](Float x) {return x; },[](Float x) {return 1 - x; } };
-		ShapeFunctionGradients = { [](Float x) {return 1; },[](Float x) {return -1; } };
-	}
-
-protected:
-	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override
-	{
-		shapeFuncId = { 0,1 };
-		return { idx,idx + 1 };
-	}
-
-	bool MeshToIdx(int mesh_idx, int shapefun_idx, int& idx) override
-	{
-		if ((mesh_idx == 0 && shapefun_idx == 1) || (mesh_idx == interval.GetPartitionCount() - 1 && shapefun_idx == 0))
-			return false;
-		if (shapefun_idx == 0)
-			idx = mesh_idx;
-		else
-			idx = mesh_idx - 1;
-		return true;
-	}
-};
-
-class QuadraticFEMApp :public StaticFEM1DApp
-{
-public:
-	QuadraticFEMApp(int segment, const std::function<Float(Float)>& rhs_func,
-		const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& c_func, const Interval& interval)
-		: StaticFEM1DApp(segment, rhs_func, d_func, c_func, interval)
-	{
-		mat_size = 2 * segment - 1;
-		ShapeFunctions = { [](Float x) {return x * (x - 0.5) * 2; },[](Float x) {return -x * (x - 1.0) * 4; },[](Float x) {return (x - 1) * (x - 0.5) * 2; } };
-		ShapeFunctionGradients = { [](Float x) {return -1 + 4 * x; },[](Float x) {return 4 - 8 * x; } ,[](Float x) {return  4 * x - 3; } };
-	}
-
-protected:
-	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override
-	{
-		if (idx % 2 == 0)
-		{
-			shapeFuncId = { 1 };
-			return { idx / 2 };
-		}
-		else
-		{
-			shapeFuncId = { 0,2 };
-			return { idx / 2,idx / 2 + 1 };
-		}
-	}
-
-	bool MeshToIdx(int mesh_idx, int shapefunc_idx, int& idx) override
-	{
-		if ((mesh_idx == 0 && shapefunc_idx == 2) || (mesh_idx == interval.GetPartitionCount() - 1 && shapefunc_idx == 0))
-			return false;
-		else
-		{
-			idx = 2 * mesh_idx + (1 - shapefunc_idx);
-		}
-
-		return true;
-	}
-};
-
 std::function<Float(Float)> LagrangianBase(int N, int i)
 {
 	std::vector<Point2> points(N + 1);
@@ -239,7 +168,7 @@ std::function<Float(Float)> LagrangianBaseDerivative(int N, int i)
 {
 	return [=](Float x)
 	{
-		Float ret=0;
+		Float ret = 0;
 		for (int missing = 0; missing <= N; ++missing)
 		{
 			if (missing != i)
@@ -281,10 +210,37 @@ public:
 	}
 
 protected:
-	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override;
-	bool MeshToIdx(int mesh_idx, int shapefun_idx, int& idx) override;
+	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override
+	{
+		if ((1 + idx) % N != 0)
+		{
+			shapeFuncId = { (1 + idx) % N };
+			return { idx / N };
+		}
+		else
+		{
+			shapeFuncId = { N,0 };
+			return { idx / N,idx / N + 1 };
+		}
+	}
+
+	bool MeshToIdx(int mesh_idx, int shapefunc_idx, int& idx) override
+	{
+		if ((mesh_idx == 0 && shapefunc_idx == 0) || (mesh_idx == interval.GetPartitionCount() - 1 && shapefunc_idx == N))
+			return false;
+		else
+		{
+			idx = N * mesh_idx + shapefunc_idx - 1;
+		}
+
+		return true;
+	}
+
 public:
 };
+
+using Linear = PolynomialFEMApp<1>;
+using Quadratic = PolynomialFEMApp<2>;
 
 //For compatibility with Mathematica
 #define Power pow
@@ -303,13 +259,13 @@ protected:
 		auto a = [](Float x) {return sin(x) + 2; };
 		auto c = [](Float x) {return x * x + 1; };
 
-		LinearFEMApp linear(segement_, rhs, a, c, Interval(0.0, 1.0));
-		//QuadraticFEMApp quadratic(segement_, rhs, a, c, Interval(0.0, 1.0));
+		Linear linear(segement_, rhs, a, c, Interval(0.0, 1.0));
+		Quadratic quadratic(segement_, rhs, a, c, Interval(0.0, 1.0));
 		linear.evaluate();
-		//quadratic.evaluate();
+		quadratic.evaluate();
 		for (int i = 0; i < Length; ++i)
 		{
-			//quadratic_val[i] = quadratic.Value(1.0 / (Length - 1) * i);
+			quadratic_val[i] = quadratic.Value(1.0 / (Length - 1) * i);
 			linear_val[i] = linear.Value(1.0 / (Length - 1) * i);
 
 			quadratic_diff[i] = quadratic_val[i] - precise_val[i];
@@ -397,7 +353,7 @@ public:
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
 void FEM1DVisualizer::draw(bool* p_open)
 {
-	if (ImGui::BeginTabBar("Homework 1")) {
+	if (ImGui::BeginTabBar("FEM 1D App")) {
 		if (ImGui::BeginTabItem("FEM1D"))
 		{
 			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail() - ImVec2(0, 100), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
@@ -457,13 +413,8 @@ void FEM1DVisualizer::draw(bool* p_open)
 	ImGui::End();
 }
 
-//int main()
-//{
-//	FEM1DVisualizer visualizer;
-//	visualizer.RenderLoop();
-//}
-
 int main()
 {
-	std::cout<<LagrangianBaseDerivative(2, 0)(0);
+	FEM1DVisualizer visualizer;
+	visualizer.RenderLoop();
 }
