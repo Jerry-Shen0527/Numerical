@@ -6,6 +6,8 @@
 #include "Geometry/ParameterDesign/Bezier.hpp"
 #include "imgui/implot.h"
 #include "Visualization/Visualizer.h"
+#include "Geometry/ParameterDesign/ParameterCurve.h"
+
 
 class BezierVisualizer :public Visualizer
 {
@@ -20,7 +22,8 @@ protected:
 
 	void evaluate_bezier()
 	{
-		BezierBernstein bezier(points);
+		BezierCurve2D bezier(points);
+		bezier.evaluate();
 		//Bezier bezier(points);
 		for (int i = 0; i < Length; ++i)
 		{

@@ -1,37 +1,47 @@
 #pragma once
 #include <vector>
 
+#include "Approximation.h"
+#include "Domain.hpp"
 #include "type.hpp"
 #include "MathFunctions.h"
 
-template<typename T>
-class Bezier
+class BezierApproximation :public Approximation
 {
 public:
-	Bezier(const std::vector<T>& p) :points(p) {}
+	BezierApproximation(const std::vector<Point2>& p) : Approximation(p)
+	{
+	}
 
-	T operator()(Float t)
+	Float operator()(Float t)
 	{
 		//Would rather not use the recursion algorithm
-		if (!points.empty())
+		if (!Points.empty())
 		{
-			auto a = points;
-			auto size = points.size();
+			auto a = Points;
+			auto size = Points.size();
 			for (int i = size - 1; i >= 0; --i)
 			{
 				for (int j = 0; j < i; ++j)
 				{
-					a[j] = Lerp((1 - t), a[j], a[j + 1]);
+					a[j] = Lerp((1 - interval.scale(t)), a[j], a[j + 1]);
 				}
 			}
-			return a[0];
+			return a[0].y();
 		}
-
-		return T();
 	}
 
-	std::vector<T> points;
+	void evaluate() override
+	{
+		if (!Points.empty())
+		{
+			std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {	return a.x() < b.x(); });
 
+			interval = Interval(Points[0].x(), Points.back().x());
+		}
+	}
+
+	Interval interval;
 private:
 };
 
@@ -39,18 +49,18 @@ template<typename T>
 class BezierBernstein
 {
 public:
-	BezierBernstein(const std::vector<T>& p) :points(p) {}
+	BezierBernstein(const std::vector<T>& p) :Points(p) {}
 
 	T operator()(Float t)
 	{
 		//Would rather not use the recursion algorithm
-		if (!points.empty())
+		if (!Points.empty())
 		{
-			int n = points.size() - 1;
+			int n = Points.size() - 1;
 			T ret = T::Zero();
 			for (int i = 0; i <= n; ++i)
 			{
-				ret += berstein(n, i, t) * points[i];
+				ret += berstein(n, i, t) * Points[i];
 			}
 			return ret;
 		}
@@ -80,7 +90,7 @@ public:
 		return  ret;
 	}
 
-	std::vector<T> points;
+	std::vector<T> Points;
 
 private:
 };
