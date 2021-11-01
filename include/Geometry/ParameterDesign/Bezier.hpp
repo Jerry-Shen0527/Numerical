@@ -11,6 +11,7 @@ class BezierApproximation :public Approximation
 public:
 	BezierApproximation(const std::vector<Point2>& p) : Approximation(p)
 	{
+		evaluate();
 	}
 
 	Float operator()(Float t)

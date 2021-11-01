@@ -8,7 +8,6 @@
 #include "Visualization/Visualizer.h"
 #include "Geometry/ParameterDesign/ParameterCurve.h"
 
-
 class BezierVisualizer :public Visualizer
 {
 protected:
@@ -22,7 +21,7 @@ protected:
 
 	void evaluate_bezier()
 	{
-		BezierCurve2D bezier(points);
+		BezierSplineCurve bezier(points);
 		bezier.evaluate();
 		//Bezier bezier(points);
 		for (int i = 0; i < Length; ++i)

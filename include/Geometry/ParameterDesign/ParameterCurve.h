@@ -1,5 +1,6 @@
 #pragma once
 #include "Bezier.hpp"
+#include "Interpolation.h"
 #include "MathFunctions.h"
 
 template<typename T, int dim>
@@ -45,6 +46,7 @@ public:
 	void evaluate() override
 	{
 		int count = control_points.size();
+
 		for (int dim_i = 0; dim_i < 2; ++dim_i)
 		{
 			Float h = 1.0 / (count - 1);
@@ -55,6 +57,35 @@ public:
 			}
 
 			BezierApproximation bezier(points);
+			function[dim_i] = bezier;
+		}
+	}
+};
+
+class BezierSplineCurve : public ParameterCurve<Point2, 2>
+{
+public:
+	explicit BezierSplineCurve(const std::vector<Point2>& points)
+		: ParameterCurve<Point2, 2>(points)
+	{
+	}
+
+	void evaluate() override
+	{
+		int count = control_points.size();
+
+		for (int dim_i = 0; dim_i < 2; ++dim_i)
+		{
+			Float h = 1.0 / (count - 1);
+			if (count == 1)h = 0.0;
+			std::vector<Point2> points;
+			for (int i = 0; i < count; ++i)
+			{
+				points.emplace_back(i * h, control_points[i][dim_i]);
+			}
+
+			BezierSplineInterpolation bezier(points);
+			bezier.evaluate();
 			function[dim_i] = bezier;
 		}
 	}

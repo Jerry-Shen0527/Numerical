@@ -226,21 +226,34 @@ public:
 	Float operator()(Float in_val) override;
 };
 
-class BezierSpline :public Interpolation
+class BezierSplineInterpolation :public Interpolation
 {
 public:
-	BezierSpline(const std::vector<Point2>& points)
+	BezierSplineInterpolation(const std::vector<Point2>& points)
 		: Interpolation(points)
 	{
 	}
 
-	Result error_bound(Float& error_b) override;
+	Result error_bound(Float& error_b) override
+	{
+		return Result::NotAvailable;
+	}
 
 	void evaluate() override
 	{
+		if (Points.empty())
+		{
+			return;
+		}
+		if (Points.size() == 1)
+		{
+			rst = Eigen::VectorXd(1);
+			rst[0] = Points[0].y();
+			return;
+		}
 		using namespace Eigen;
 		int point_count = Points.size();
-		int mat_size = point_count * 3 + 1;
+		int mat_size = point_count * 3 - 2;
 		matrix = SparseMatrix<Float>(mat_size, mat_size);
 
 		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
@@ -250,38 +263,58 @@ public:
 
 		for (int i = 1; i < point_count - 1; ++i)
 		{
-			auto q = Points[i];
-			auto q_1 = Points[i - 1];
-
-			auto p = Points[i];
-			auto p_1 = Points[i + 1];
-			auto x = interval.scale(p.x());
-
-			//C0
 			triplets.emplace_back(3 * i, 3 * i, 1);
 
+			auto p = Points[i];
+			auto x = p.x();
+			auto diff_1 = (x - Points[i - 1].x()) / 3.0;
+			auto diff_2 = (Points[i + 1].x() - x) / 3.0;
+
 			//C1
-			triplets.emplace_back(3 * i + 1, 3 * i, 1.0 / (x - p_1.x()));
-			triplets.emplace_back(3 * i + 1, 3 * i - 1, -1.0 / (x - p_1.x()));
-			triplets.emplace_back(3 * i + 1, 3 * i + 1, 1.0 / (q_1.x() - x));
-			triplets.emplace_back(3 * i + 1, 3 * i, -1.0 / (q_1.x() - x));
+
+			triplets.emplace_back(3 * i - 1, 3 * i, 1.0 / diff_1);
+			triplets.emplace_back(3 * i - 1, 3 * i - 1, -1.0 / diff_1);
+			//C1
+			triplets.emplace_back(3 * i - 1, 3 * i, 1.0 / diff_2);
+			triplets.emplace_back(3 * i - 1, 3 * i + 1, -1.0 / diff_2);
+			//C2
+
+			triplets.emplace_back(3 * i + 1, 3 * i + 0, 1.0 / diff_1 / diff_1);
+			triplets.emplace_back(3 * i + 1, 3 * i - 1, -2.0 / diff_1 / diff_1);
+			triplets.emplace_back(3 * i + 1, 3 * i - 2, 1.0 / diff_1 / diff_1);
 
 			//C2
 
-			auto diff_1 = x - p_1.x();
-			auto diff_2 = q_1.x() - x;
-
-			triplets.emplace_back(3 * i + 2, 3 * i + 0, 1.0 / diff_1 / diff_1);
-			triplets.emplace_back(3 * i + 2, 3 * i - 1, -2.0 / diff_1 / diff_1);
-			triplets.emplace_back(3 * i + 2, 3 * i - 2, 1.0 / diff_1 / diff_1);
-			triplets.emplace_back(3 * i + 2, 3 * i + 0, 1.0 / diff_2 / diff_2);
-			triplets.emplace_back(3 * i + 2, 3 * i + 1, -2.0 / diff_2 / diff_2);
-			triplets.emplace_back(3 * i + 2, 3 * i + 2, 1.0 / diff_2 / diff_2);
+			triplets.emplace_back(3 * i + 1, 3 * i + 0, -1.0 / diff_2 / diff_2);
+			triplets.emplace_back(3 * i + 1, 3 * i + 1, 2.0 / diff_2 / diff_2);
+			triplets.emplace_back(3 * i + 1, 3 * i + 2, -1.0 / diff_2 / diff_2);
 		}
+
+		//C0
+		int i = point_count - 1;
+
+		auto p = Points[i];
+		auto x = p.x();
+		triplets.emplace_back(3 * i, 3 * i, 1);
+		auto diff_1 = (x - Points[i - 1].x()) / 3.0;
+		//C2 BC
+		triplets.emplace_back(3 * i - 1, 3 * i - 0, 1.0 / diff_1 / diff_1);
+		triplets.emplace_back(3 * i - 1, 3 * i - 1, -2.0 / diff_1 / diff_1);
+		triplets.emplace_back(3 * i - 1, 3 * i - 2, 1.0 / diff_1 / diff_1);
+		i = 0;
+
+		p = Points[i];
+		x = p.x();
+		triplets.emplace_back(3 * i, 3 * i, 1);
+		diff_1 = (Points[i + 1].x() - x) / 3.0;
+		//C2 BC
+		triplets.emplace_back(3 * i + 1, 3 * i + 0, 1.0 / diff_1 / diff_1);
+		triplets.emplace_back(3 * i + 1, 3 * i + 1, -2.0 / diff_1 / diff_1);
+		triplets.emplace_back(3 * i + 1, 3 * i + 2, 1.0 / diff_1 / diff_1);
 
 		matrix.setFromTriplets(triplets.begin(), triplets.end());
 
-		VectorXf rhs(mat_size);
+		VectorXd rhs(mat_size);
 
 		rhs.setZero();
 
@@ -290,19 +323,49 @@ public:
 			rhs[3 * i] = Points[i].y();
 		}
 
-		SimplicialLLT<Eigen::SparseMatrix<Float>> solver;
+		SparseLU<Eigen::SparseMatrix<Float>> solver;
 		solver.compute(matrix);
 
-		rhs = solver.solve(rhs);
+		rst = solver.solve(rhs);
 	}
 
 	Float operator()(Float in_val) override
 	{
+		if (Points.empty())
+		{
+			return 0;
+		}
+		for (int i = 0; i < Points.size(); ++i)
+		{
+			if (Points[i].x() < in_val)
+				continue;
+			{
+				i--;
+				if (i < 0)
+				{
+					return rst[0];
+				}
+				std::vector<Point2> bezier_points(4);
+
+				auto diff = Points[i + 1].x() - Points[i].x();
+
+				for (int j = 0; j < 4; ++j)
+				{
+					bezier_points[j] = Point2(Points[i].x() + j * (diff) / 3.0, rst[3 * i + j]);
+				}
+
+				BezierApproximation bezier(bezier_points);
+
+				return bezier(in_val);
+			}
+		}
+
+		return rst[3 * (Points.size() - 1)];
 	}
 
 	Eigen::SparseMatrix<Float> matrix;
 
-	Eigen::VectorXf rst;
+	Eigen::VectorXd rst;
 
 	std::vector<std::vector<Point2>> parts;
 };
