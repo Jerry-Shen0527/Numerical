@@ -21,7 +21,7 @@ protected:
 
 	void evaluate_bezier()
 	{
-		BezierSplineCurve bezier(points);
+		BSplineCurve bezier(points);
 		bezier.evaluate();
 		//Bezier bezier(points);
 		for (int i = 0; i < Length; ++i)

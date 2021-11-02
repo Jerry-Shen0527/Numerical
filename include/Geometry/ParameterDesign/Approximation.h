@@ -14,6 +14,7 @@ protected:
 	std::vector<Point2> Points;
 };
 
+//This is definitely a bad idea
 template<int k>
 class BSplineApproximation :public Approximation
 {
@@ -25,7 +26,7 @@ public:
 
 	void evaluate() override
 	{
-		if (Points.size() <= 1)
+		if (Points.size() < k)
 		{
 			return;
 		}
@@ -34,11 +35,11 @@ public:
 
 		Interval interval(Points.front().x(), Points.back().x());
 
-		knot_vector.resize(Points.size());
+		knot_vector.resize(Points.size() - k + 2);
 
-		for (int i = 0; i < Points.size(); ++i)
+		for (int i = 0; i < Points.size() - k + 2; ++i)
 		{
-			knot_vector[i] = interval.lerp(Float(i) / (Points.size() - 1));
+			knot_vector[i] = interval.lerp(Float(i) / (Points.size() - k + 1));
 		}
 
 		for (int i = 0; i < k - 1; ++i)
@@ -50,16 +51,16 @@ public:
 
 	Float operator()(Float t) override
 	{
-		if (Points.empty())
+		if (Points.size() < k)
 		{
 			return 0;
 		}
 
-		if (t < Points.begin()->x())
+		if (t <= Points.begin()->x())
 		{
-			return Points.begin()->y();
+			return Points.front().y();
 		}
-		if (t > Points.back().x())
+		if (t >= Points.back().x())
 		{
 			return Points.back().y();
 		}
@@ -68,18 +69,18 @@ public:
 
 		int r = std::distance(knot_vector.begin(), iter) - 1;
 
-		std::vector<Float> tower(std::next(knot_vector.begin(), r - k + 1), std::next(knot_vector.begin(), r + 1));
+		std::vector<Point2> tower(std::next(Points.begin(), r - k + 1), std::next(Points.begin(), r + 1));
 
-		for (int j = 1; j < k - 1; ++j)
+		for (int j = 1; j <= k - 1; ++j)
 		{
-			for (int i = r - k + 1 + j; i <= r; ++i)
+			for (int i = r; i >= r - k + 1 + j; --i)
 			{
-				int index = r - k + 1 + i;
-				float alpha = (t - Points[i].x()) / (Points[i + k - j].x() - Points[i].x());
+				int index = i - (r - k + 1);
+				float alpha = (t - knot_vector[i]) / (knot_vector[i + k - j] - knot_vector[i]);
+				tower[index] = Lerp(alpha, tower[index - 1], tower[index]);
 			}
 		}
-
-		return 0;
+		return tower.back().y();
 	}
 
 	std::vector<Float> knot_vector;

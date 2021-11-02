@@ -19,8 +19,7 @@ protected:
 
 	void evaluate_lagrangian()
 	{
-		BSplineApproximation<2> lagrangian(points);
-		//BezierApproximation lagrangian(points);
+		LagrangianPolynomial lagrangian(points);
 		lagrangian.evaluate();
 
 		RadialInterpolation radial(points);
