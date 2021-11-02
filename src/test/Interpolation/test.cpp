@@ -19,7 +19,7 @@ protected:
 
 	void evaluate_lagrangian()
 	{
-		BSplineApproximation<4> lagrangian(points);
+		BSplineApproximation<2> lagrangian(points);
 		//BezierApproximation lagrangian(points);
 		lagrangian.evaluate();
 

@@ -25,7 +25,7 @@ public:
 			{
 				for (int j = 0; j < i; ++j)
 				{
-					a[j] = Lerp((1 - interval.scale(t)), a[j], a[j + 1]);
+					a[j] = Lerp( interval.scale(t), a[j], a[j + 1]);
 				}
 			}
 			return a[0].y();

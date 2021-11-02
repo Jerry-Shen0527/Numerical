@@ -1,4 +1,5 @@
 #pragma once
+#include "Domain.hpp"
 
 class Approximation
 {
@@ -24,12 +25,27 @@ public:
 
 	void evaluate() override
 	{
-		if (Points.empty())
+		if (Points.size() <= 1)
 		{
 			return;
 		}
 
 		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+
+		Interval interval(Points.front().x(), Points.back().x());
+
+		knot_vector.resize(Points.size());
+
+		for (int i = 0; i < Points.size(); ++i)
+		{
+			knot_vector[i] = interval.lerp(Float(i) / (Points.size() - 1));
+		}
+
+		for (int i = 0; i < k - 1; ++i)
+		{
+			knot_vector.insert(knot_vector.begin(), knot_vector.front());
+			knot_vector.push_back(knot_vector.back());
+		}
 	}
 
 	Float operator()(Float t) override
@@ -48,17 +64,11 @@ public:
 			return Points.back().y();
 		}
 
-		for (int i = 0; i < k - 1; ++i)
-		{
-			Points.insert(Points.begin(), Points.front());
-			Points.push_back(Points.back());
-		}
+		auto iter = std::find_if(knot_vector.begin(), knot_vector.end(), [t](Float knot) {return  knot > t; });
 
-		auto iter = std::find_if(Points.begin(), Points.end(), [t](const Point2& point) {return  point.x() > t; });
+		int r = std::distance(knot_vector.begin(), iter) - 1;
 
-		int r = std::distance(Points.begin(), iter) - 1;
-
-		std::vector<Point2> tower(std::next(Points.begin(), r - k + 1), std::next(Points.begin(), r + 1));
+		std::vector<Float> tower(std::next(knot_vector.begin(), r - k + 1), std::next(knot_vector.begin(), r + 1));
 
 		for (int j = 1; j < k - 1; ++j)
 		{
@@ -71,4 +81,6 @@ public:
 
 		return 0;
 	}
+
+	std::vector<Float> knot_vector;
 };
