@@ -369,3 +369,28 @@ public:
 
 	std::vector<std::vector<Point2>> parts;
 };
+
+class BSplineInterpolation :public Interpolation
+{
+public:
+	Result error_bound(Float& error_b) override
+	{
+		return Result::NotAvailable;
+	}
+
+	void evaluate() override
+	{
+
+	}
+
+	Float operator()(Float in_val) override
+	{
+
+	}
+
+	Eigen::SparseMatrix<Float> matrix;
+
+	Eigen::VectorXd rst;
+
+	std::vector<std::vector<Point2>> parts;
+};

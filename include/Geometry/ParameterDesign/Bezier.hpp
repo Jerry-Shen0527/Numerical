@@ -30,6 +30,7 @@ public:
 			}
 			return a[0].y();
 		}
+		else return 0;
 	}
 
 	void evaluate() override

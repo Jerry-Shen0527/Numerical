@@ -19,7 +19,8 @@ protected:
 
 	void evaluate_lagrangian()
 	{
-		LagrangianPolynomial lagrangian(points);
+		BSplineApproximation<4> lagrangian(points);
+		//BezierApproximation lagrangian(points);
 		lagrangian.evaluate();
 
 		RadialInterpolation radial(points);
@@ -41,8 +42,8 @@ public:
 	const float Length = 1001;
 
 	std::vector<float> xs = std::vector<float>(Length);
-	std::vector<float> ys1 = std::vector<float>(Length);
-	std::vector<float> ys2 = std::vector<float>(Length);
+	std::vector<float> ys1 = std::vector<float>(Length, 0);
+	std::vector<float> ys2 = std::vector<float>(Length, 0);
 };
 
 void DrawRadial()
