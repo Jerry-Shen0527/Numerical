@@ -391,30 +391,37 @@ public:
 		}
 		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
 
-		int N = Points.size() + 3;
-		using namespace Eigen;
-		rst = VectorXd(N);
-		matrix = SparseMatrix<Float>(N, N);
+		interval = Interval(Points.front().x(), Points.back().x());
+		interval.SetPartitionCount(Points.size());
 
-		std::vector<Float> s_vector(N + 4);
+		int mat_size = Points.size() + 3;
+		using namespace Eigen;
+		rst = VectorXd(mat_size);
+		matrix = SparseMatrix<Float>(mat_size, mat_size);
+
+		std::vector<Float> s_vector(mat_size + 4);
 
 		for (int i = 0; i < 4; ++i)
 		{
-			s_vector[i] = 0;
-			s_vector[N +3 - i] = 1.0;
+			s_vector[i] = Points.front().x();
+			s_vector[mat_size + 3 - i] = Points.back().x();
 		}
 
-		for (int i = 0; i < Points.size(); ++i)
+		for (int i = 4; i < mat_size; ++i)
 		{
-			
+			auto value = interval.SubInterval(i - 3).lerp(0.0);
+			s_vector[i] = value;
 		}
 
 		std::vector<Triplet<Float>> triplets;
 
 		triplets.emplace_back(0, 0, 1);
-		triplets.emplace_back(N - 1, N - 1, 1);
+		triplets.emplace_back(mat_size - 1, mat_size - 1, 1);
 
-		//for (int i = 2; i < N - 2; ++i)
+		VectorXd rhs(mat_size);
+		rhs.setZero();
+
+		//for (int i = 2; i < mat_size - 2; ++i)
 		//{
 		//	triplets.emplace_back(i, i - 1, );
 		//	triplets.emplace_back(i, i + 0, );
