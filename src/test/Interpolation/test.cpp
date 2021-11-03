@@ -19,7 +19,7 @@ protected:
 
 	void evaluate_lagrangian()
 	{
-		LagrangianPolynomial lagrangian(points);
+		BSplineInterpolation lagrangian(points);
 		lagrangian.evaluate();
 
 		RadialInterpolation radial(points);
