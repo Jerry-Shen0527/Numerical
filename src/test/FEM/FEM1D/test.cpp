@@ -30,7 +30,7 @@ static Float LinearFunc(Float x, Float x0, Float x_left, Float x_right)
 class LinearBaseFEM1D :public StaticFEM1D
 {
 public:
-	LinearBaseFEM1D(size_t size) : StaticFEM1D(size)
+	LinearBaseFEM1D(size_t size) : StaticFEM1D(), size(size)
 	{
 		mesh.resize(size);
 		//A default devision is provided
@@ -104,6 +104,9 @@ private:
 	}
 
 protected:
+
+	int size;
+
 	Float SelfInnerProduct(int i, int j) override
 	{
 		return 0;
@@ -112,6 +115,11 @@ protected:
 	Float GradientSelfInnerProduct(int i, int j) override
 	{
 		return 0;
+	}
+
+	void SetMatSize() override
+	{
+		mat_size = size;
 	}
 };
 
@@ -155,7 +163,7 @@ static Float QuadraticGradientInnerProduct(Float xmin, Float xmid, Float xmax, F
 class QuadraticBaseFEM1D :public StaticFEM1D
 {
 public:
-	QuadraticBaseFEM1D(size_t size) : StaticFEM1D(2 * size + 1), mesh_size(size)
+	QuadraticBaseFEM1D(size_t size) : StaticFEM1D(), mesh_size(size), mat_size_(2 * size + 1)
 	{
 		mesh.resize(size);
 		//A default division is provided
@@ -168,6 +176,7 @@ public:
 
 	std::vector<Float> mesh;
 	size_t mesh_size;
+	size_t mat_size_;
 
 	Float Value(Float x) override
 	{
@@ -276,6 +285,11 @@ protected:
 	Float GradientSelfInnerProduct(int i, int j) override
 	{
 		return 0;
+	}
+
+	void SetMatSize() override
+	{
+		mat_size = mat_size_;
 	}
 };
 
