@@ -5,8 +5,7 @@
 class StaticFEM
 {
 public:
-	explicit StaticFEM(size_t size)
-		: mat_size(size)
+	explicit StaticFEM()
 	{
 	}
 
@@ -14,39 +13,41 @@ public:
 
 	virtual void evaluate()
 	{
+		SetMatSize();
 		FillMatrix();
-
 		FillRhs();
 
-		Eigen::SimplicialLLT<Eigen::SparseMatrix<Float>> solver;
+		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
 
 		solver.compute(matrix_);
 		rst = solver.solve(rhs);
 	}
 
-	Eigen::VectorXd& coeff_() { return rst; }
+	Vector& coeff_() { return rst; }
 
 protected:
 	//This is a premature design of interfaces, which might be refactored in large scale
+	virtual void SetMatSize() = 0;
 	virtual void FillMatrix() = 0;
 	virtual void FillRhs() = 0;
 
 	virtual Float GradientInnerProduct(int i, int j) = 0;
 	virtual Float SelfInnerProduct(int i, int j) = 0;
+	virtual Float GradientSelfInnerProduct(int i, int j) = 0;
 	virtual Float RHSInnerProduct(int i) = 0;
 	virtual std::vector<int> RelatedFuncIdx(int idx) = 0;
 
 	size_t mat_size;
 
 	Eigen::SparseMatrix<Float> matrix_;
-	Eigen::VectorXd rhs;
-	Eigen::VectorXd rst;
+	Vector rhs;
+	Vector rst;
 };
 
 class StaticFEM1D :public StaticFEM
 {
 protected:
-	StaticFEM1D(size_t mat_size) : StaticFEM(mat_size)
+	StaticFEM1D()
 	{
 	}
 

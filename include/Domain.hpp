@@ -1,6 +1,7 @@
 #pragma once
 #include "MathFunctions.h"
 #include "RNG.hpp"
+#include <set>
 
 template<typename T>
 class Domain
@@ -17,16 +18,19 @@ using Domain1D = Domain<Float>;
 class Interval :public Domain1D
 {
 public:
-	Interval(Float left=0, Float right=1) : left(left), right(right) { SetPartitionCount(1); }
+	Interval(Float left = 0, Float right = 1) : left(left), right(right) { SetPartitionCount(1); }
 
 	void SetPartitionCount(int partition)
 	{
 		n = partition;
 		h = length() / Float(n);
+		knot_points.clear();
 	}
 
 	int GetPartitionCount() const
 	{
+		if (!knot_points.empty())
+			return knot_points.size() + 1;
 		return n;
 	}
 
@@ -35,9 +39,17 @@ public:
 		return value >= left && value < right;
 	}
 
+	void SetSubIntervalKnots(const std::vector<Float>& vector)
+	{
+		//Remove duplicated
+		auto set = std::set<Float>(vector.begin(), vector.end());
+		knot_points = std::vector<Float>(set.begin(), set.end());
+		std::sort(knot_points.begin(), knot_points.end());
+	}
+
 	Float RandomSample(Float& pdf) const override
 	{
-		pdf = 1.0 / (length());
+		pdf = 1.0 / length();
 		return  RandomFloat(left, right);
 	}
 
@@ -51,7 +63,26 @@ public:
 		return right - left;
 	}
 
-	Interval SubInterval(int idx) { return Interval(left + idx * h, left + (idx + 1) * h); }
+	Interval SubInterval(int idx)
+	{
+		if (knot_points.empty())
+		{
+			return Interval(left + idx * h, left + (idx + 1) * h);
+		}
+		else
+		{
+			if (idx == 0)
+			{
+				return Interval(left, knot_points[0]);
+			}
+			if (idx == knot_points.size())
+			{
+				return Interval(knot_points.back(), right);
+			}
+
+			return Interval(knot_points[idx - 1], knot_points[idx]);
+		}
+	}
 
 	//Scale a f([left,right]) to f([0,1]), remember to multiply the factor when scaling derivatives
 	std::function<Float(Float)> scale(const std::function<Float(Float)>& func, Float factor = 1.0)
@@ -73,10 +104,7 @@ private:
 	Float h = 0;
 	int n = 1;
 
-	Float GetMeasure() const
-	{
-		return length() / static_cast<Float>(n);
-	}
+	std::vector<Float> knot_points;
 };
 
 template<typename T>

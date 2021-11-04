@@ -56,9 +56,9 @@ public:
 		if (!Points.empty())
 		{
 			auto size = Points.size();
-			matrix = Eigen::MatrixXd(size, size);
+			matrix = Matrix(size, size);
 
-			Eigen::VectorXd b(size);
+			Vector b(size);
 			for (int i = 0; i < size; ++i)
 			{
 				b[i] = Points[i].y() - ave;
@@ -99,8 +99,8 @@ public:
 		return 1.0 / ((x - center) * (x - center) + d);
 	}
 
-	Eigen::MatrixXd matrix;
-	Eigen::VectorXd rst;
+	Matrix matrix;
+	Vector rst;
 	Float ave;
 	Float d = 1;
 };
@@ -247,7 +247,7 @@ public:
 		}
 		if (Points.size() == 1)
 		{
-			rst = Eigen::VectorXd(1);
+			rst = Vector(1);
 			rst[0] = Points[0].y();
 			return;
 		}
@@ -314,7 +314,7 @@ public:
 
 		matrix.setFromTriplets(triplets.begin(), triplets.end());
 
-		VectorXd rhs(mat_size);
+		Vector rhs(mat_size);
 
 		rhs.setZero();
 
@@ -365,7 +365,7 @@ public:
 
 	Eigen::SparseMatrix<Float> matrix;
 
-	Eigen::VectorXd rst;
+	Vector rst;
 
 	std::vector<std::vector<Point2>> parts;
 };
@@ -396,7 +396,7 @@ public:
 
 		int mat_size = Points.size() + 3;
 		using namespace Eigen;
-		rst = VectorXd(mat_size);
+		rst = Vector(mat_size);
 		matrix = SparseMatrix<Float>(mat_size, mat_size);
 
 		std::vector<Float> s_vector(mat_size + 4);
@@ -418,7 +418,7 @@ public:
 		triplets.emplace_back(0, 0, 1);
 		triplets.emplace_back(mat_size - 1, mat_size - 1, 1);
 
-		VectorXd rhs(mat_size);
+		Vector rhs(mat_size);
 		rhs.setZero();
 
 		//for (int i = 2; i < mat_size - 2; ++i)
@@ -442,7 +442,7 @@ public:
 
 	Eigen::SparseMatrix<Float> matrix;
 
-	Eigen::VectorXd rst;
+	Vector rst;
 
 	Interval interval;
 

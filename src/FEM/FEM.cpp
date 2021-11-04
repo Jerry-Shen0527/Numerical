@@ -11,6 +11,7 @@ void StaticFEM1D::FillMatrix()
 		{
 			triplets.emplace_back(i, j, GradientInnerProduct(i, j));
 			triplets.emplace_back(i, j, SelfInnerProduct(i, j));
+			triplets.emplace_back(i, j, GradientSelfInnerProduct(i, j));
 		}
 	}
 	matrix_ = Eigen::SparseMatrix<Float>(mat_size, mat_size);
@@ -19,7 +20,7 @@ void StaticFEM1D::FillMatrix()
 
 void StaticFEM1D::FillRhs()
 {
-	rhs = Eigen::VectorXd(mat_size);
+	rhs = Vector(mat_size);
 	for (int i = 0; i < mat_size; ++i)
 	{
 		rhs(i) = RHSInnerProduct(i);

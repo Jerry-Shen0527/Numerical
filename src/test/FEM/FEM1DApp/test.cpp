@@ -11,20 +11,45 @@
 #include "NIntegrate/Integrate.hpp"
 #include "Visualization/Visualizer.h"
 
+#include <numeric>
+
 class StaticFEM1DApp :public StaticFEM1D
 {
 public:
-	StaticFEM1DApp(int segment, const std::function<Float(Float)>& rhs_func, const std::function<Float(Float)>& d_func,
+	StaticFEM1DApp(const std::function<Float(Float)>& rhs_func, const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& b_func,
 		const std::function<Float(Float)>& c_func, const Interval& interval)
-		: StaticFEM1D(segment), RHS_func(rhs_func),
+		: RHS_func(rhs_func),
 		d_func(d_func),
+		b_func(b_func),
 		c_func(c_func),
 		interval(interval)
 	{
-		this->interval.SetPartitionCount(segment);
 	}
 
 protected:
+	Float GradientSelfInnerProduct(int i, int j) override
+	{
+		std::vector<int> i_id, j_id;
+		auto i_mesh = IdxToMesh(i, i_id);
+		auto j_mesh = IdxToMesh(j, j_id);
+
+		Float ret = 0;
+
+		for (int a = 0; a < i_mesh.size(); ++a)
+		{
+			for (int b = 0; b < j_mesh.size(); ++b)
+			{
+				if (i_mesh[a] == j_mesh[b])
+				{
+					auto sub_interval = interval.SubInterval(i_mesh[a]);
+					ret += WeightedL2InnerProduct(sub_interval.scale(ShapeFunctions[i_id[a]]),
+						sub_interval.scale(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), b_func, sub_interval);
+				}
+			}
+		}
+
+		return ret;
+	}
 	Float GradientInnerProduct(int i, int j) override
 	{
 		std::vector<int> i_id, j_id;
@@ -132,8 +157,7 @@ public:
 					int idx;
 					if (MeshToIdx(i, j, idx))
 					{
-						ret += sub_interval.scale(ShapeFunctions[j]
-						)(x) * rst(idx);
+						ret += sub_interval.scale(ShapeFunctions[j])(x) * rst(idx);
 					}
 				}
 			}
@@ -141,12 +165,14 @@ public:
 		return ret;
 	}
 
+public:
 	std::vector<std::function<Float(Float)>> ShapeFunctions;
 	std::vector<std::function<Float(Float)>> ShapeFunctionGradients;
 
-	//-a u''+b u'+c u=RHSFunc
+	//- (d[x]u'[x])'+ b u'[x]+c u=RHSFunc
 	std::function<Float(Float)> RHS_func;
 	std::function<Float(Float)> d_func;
+	std::function<Float(Float)> b_func;
 	std::function<Float(Float)> c_func;
 
 	Interval interval;
@@ -194,13 +220,12 @@ template<int N>
 class PolynomialFEMApp :public StaticFEM1DApp
 {
 public:
-	PolynomialFEMApp(int segment, const std::function<Float(Float)>& rhs_func,
-		const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& c_func,
+	PolynomialFEMApp(const std::function<Float(Float)>& rhs_func,
+		const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& b_func, const std::function<Float(Float)>& c_func,
 		const Interval& interval)
-		: StaticFEM1DApp(segment, rhs_func, d_func, c_func, interval)
+		: StaticFEM1DApp(rhs_func, d_func, b_func, c_func, interval)
 	{
 		static_assert(N > 0);
-		mat_size = N * segment - 1;
 
 		for (int i = 0; i <= N; ++i)
 		{
@@ -236,6 +261,11 @@ protected:
 		return true;
 	}
 
+	void SetMatSize() override
+	{
+		mat_size = N * interval.GetPartitionCount() - 1;
+	}
+
 public:
 };
 
@@ -246,6 +276,7 @@ using Quadratic = PolynomialFEMApp<2>;
 #define Power pow
 #define Sin sin
 #define Cos cos
+const Float epsilon = 1E-1;
 
 class FEM1DVisualizer :public Visualizer
 {
@@ -255,12 +286,38 @@ protected:
 	{
 		int segement_ = segemnt;
 
-		auto rhs = [](Float x) {return  -4 - x + Power(x, 2) - Power(x, 3) + Power(x, 4) + Cos(x) - 2 * x * Cos(x) - 2 * Sin(x); };
-		auto a = [](Float x) {return sin(x) + 2; };
-		auto c = [](Float x) {return x * x + 1; };
+		//Homework 2
+		//auto rhs = [](Float x) {return  -4 - x + Power(x, 2) - Power(x, 3) + Power(x, 4) + Cos(x) - 2 * x * Cos(x) - 2 * Sin(x); };
+		//auto a = [](Float x) {return sin(x) + 2; };
+		//auto c = [](Float x) {return x * x + 1; };
+		auto rhs = [](Float x) {return  x; };
+		auto d = [](Float x) {return epsilon; };
+		auto b = [](Float x) {return 1;	};
+		auto c = [](Float x) {return 0; };
 
-		Linear linear(segement_, rhs, a, c, Interval(0.0, 1.0));
-		Quadratic quadratic(segement_, rhs, a, c, Interval(0.0, 1.0));
+		Interval interval(0.0, 1.0);
+
+		interval.SetPartitionCount(segement_);
+
+		//Interval interval1(0.0, 1 - 2 * epsilon * log(segement_));
+		//interval1.SetPartitionCount(segement_);
+		//Interval interval2(1 - 2 * epsilon * log(segement_), 1.0);
+		//interval2.SetPartitionCount(segement_);
+
+		//std::vector<Float> knot_vector(2 * segement_ - 1);
+
+		//for (int i = 0; i < segement_ - 1; ++i)
+		//{
+		//	knot_vector[i] = interval1.SubInterval(i).lerp(1.0);
+		//	knot_vector[segement_ + i] = interval2.SubInterval(i).lerp(1.0);
+		//}
+		//if (segement_>1)
+		//	knot_vector[segement_ - 1] = interval1.SubInterval(segement_ - 1).lerp(1.0);
+
+		//interval.SetSubIntervalKnots(knot_vector);
+
+		Linear linear(rhs, d, b, c, interval);
+		Quadratic quadratic(rhs, d, b, c, interval);
 		linear.evaluate();
 		quadratic.evaluate();
 		for (int i = 0; i < Length; ++i)
@@ -277,9 +334,9 @@ protected:
 
 	std::vector<Point2> points;
 	bool updated = true;
-	int segemnt = 1;
+	int segemnt = 16;
 
-	void error(std::vector<Float>& ref, std::vector<Float>& eval, Float& L_1, Float& L_2, Float& L_inf)
+	void error(std::vector<float>& ref, std::vector<float>& eval, Float& L_1, Float& L_2, Float& L_inf)
 	{
 		assert(ref.size() == eval.size());
 
@@ -302,10 +359,20 @@ public:
 		{
 			xs[i] = i * h;
 			rhs_f[i] = (xs[i] - 1) * sin(xs[i]);
-			auto accurate_func = [](Float x) {return (-1 + x) * x; };
-			precise_val[i] = accurate_func(xs[i]);
+
+			auto accurate_func = [](Float x) {return -(-1 + exp(x / epsilon) + Power(x, 2) - exp(1 / epsilon) * Power(x, 2) + 2 * epsilon * (-1 + exp(x / epsilon) + x - exp(1 / epsilon) * x)) / (2. * (-1 + exp(1 / epsilon))); };
+
+			if (epsilon < 1E-2)
+			{
+				auto accurate_func = [](Float x) {return -exp(1 / epsilon * (x - 1)) / 2. + x * epsilon + x * x / 2.; };
+				precise_val[i] = accurate_func(xs[i]);
+			}
+			else
+			{
+				precise_val[i] = accurate_func(xs[i]);
+			}
 		}
-		segemnt = 2;
+		segemnt = 16;
 
 		Float L1, L2, L_inf;
 
@@ -327,27 +394,27 @@ public:
 
 			segemnt *= 2;
 		} while (segemnt != 1024);
-		segemnt = 2;
+		segemnt = 16;
 		evaluate();
 	}
-	const size_t Length = 2001;
+	const size_t Length = 10001;
 
-	std::vector<Float> xs = std::vector<Float>(Length);
-	std::vector<Float> rhs_f = std::vector<Float>(Length);
-	std::vector<Float> precise_val = std::vector<Float>(Length);
-	std::vector<Float> quadratic_val = std::vector<Float>(Length);
-	std::vector<Float> linear_val = std::vector<Float>(Length);
-	std::vector<Float> quadratic_diff = std::vector<Float>(Length);
-	std::vector<Float> linear_diff = std::vector<Float>(Length);
+	std::vector<float> xs = std::vector<float>(Length);
+	std::vector<float> rhs_f = std::vector<float>(Length);
+	std::vector<float> precise_val = std::vector<float>(Length);
+	std::vector<float> quadratic_val = std::vector<float>(Length);
+	std::vector<float> linear_val = std::vector<float>(Length);
+	std::vector<float> quadratic_diff = std::vector<float>(Length);
+	std::vector<float> linear_diff = std::vector<float>(Length);
 
-	std::vector<Float> pointcount;
-	std::vector<Float> linear_vec_L_1;
-	std::vector<Float> linear_vec_L_2;
-	std::vector<Float> linear_vec_L_inf;
+	std::vector<float> pointcount;
+	std::vector<float> linear_vec_L_1;
+	std::vector<float> linear_vec_L_2;
+	std::vector<float> linear_vec_L_inf;
 
-	std::vector<Float> quadratic_vec_L_1;
-	std::vector<Float> quadratic_vec_L_2;
-	std::vector<Float> quadratic_vec_L_inf;
+	std::vector<float> quadratic_vec_L_1;
+	std::vector<float> quadratic_vec_L_2;
+	std::vector<float> quadratic_vec_L_inf;
 };
 
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
@@ -365,7 +432,7 @@ void FEM1DVisualizer::draw(bool* p_open)
 
 				ImPlot::EndPlot();
 			}
-			if (ImGui::SliderInt("Number of segments", &segemnt, 1, 200))
+			if (ImGui::SliderInt("Number of segments", &segemnt, 2, 200))
 			{
 				evaluate();
 			}
@@ -381,9 +448,9 @@ void FEM1DVisualizer::draw(bool* p_open)
 
 				ImPlot::EndPlot();
 			}
-			if (ImGui::SliderInt("Number of segments", &segemnt, 1, 200))
+			if (ImGui::SliderInt("Number of segments", &segemnt, 2, 200))
 			{
-				segemnt = segemnt < 1 ? 1 : segemnt;
+				segemnt = segemnt < 2 ? 2 : segemnt;
 				evaluate();
 			}
 			ImGui::EndTabItem();

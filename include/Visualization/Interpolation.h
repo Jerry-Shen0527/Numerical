@@ -53,9 +53,9 @@ public:
 		if (!Points.empty())
 		{
 			auto size = Points.size();
-			matrix = Eigen::MatrixXd(size, size);
+			matrix = Matrix(size, size);
 
-			Eigen::VectorXd b(size);
+			Vector b(size);
 			for (int i = 0; i < size; ++i)
 			{
 				b[i] = Points[i].y() - ave;
@@ -96,8 +96,8 @@ public:
 		return 1.0 / ((x - center) * (x - center) + d);
 	}
 
-	Eigen::MatrixXd matrix;
-	Eigen::VectorXd rst;
+	Matrix matrix;
+	Vector rst;
 	Float ave;
 	Float d = 1;
 };
