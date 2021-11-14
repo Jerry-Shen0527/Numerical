@@ -318,7 +318,7 @@ protected:
 	void DragPoint();
 	void draw(bool* p_open) override;
 
-	std::vector<Point2> points;
+	std::vector<Point2f> points;
 	bool updated = true;
 	int segemnt = 1;
 

@@ -4,14 +4,14 @@
 class Approximation
 {
 public:
-	Approximation(const std::vector<Point2>& points) :Points(points) {  }
+	Approximation(const std::vector<Point2f>& points) :Points(points) {  }
 
 	virtual void evaluate() = 0;
 	virtual ~Approximation() = default;
 
 	virtual  Float operator() (Float in_val) = 0;
 protected:
-	std::vector<Point2> Points;
+	std::vector<Point2f> Points;
 };
 
 //This is definitely a bad idea
@@ -19,7 +19,7 @@ template<int k>
 class BSplineApproximation :public Approximation
 {
 public:
-	explicit BSplineApproximation(const std::vector<Point2>& matrices)
+	explicit BSplineApproximation(const std::vector<Point2f>& matrices)
 		: Approximation(matrices)
 	{
 	}
@@ -31,7 +31,7 @@ public:
 			return;
 		}
 
-		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+		std::sort(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
 
 		Interval interval(Points.front().x(), Points.back().x());
 
@@ -69,7 +69,7 @@ public:
 
 		int r = std::distance(knot_vector.begin(), iter) - 1;
 
-		std::vector<Point2> tower(std::next(Points.begin(), r - k + 1), std::next(Points.begin(), r + 1));
+		std::vector<Point2f> tower(std::next(Points.begin(), r - k + 1), std::next(Points.begin(), r + 1));
 
 		for (int j = 1; j <= k - 1; ++j)
 		{

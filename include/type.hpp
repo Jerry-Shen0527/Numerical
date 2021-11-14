@@ -4,7 +4,7 @@
 #include <Eigen/Eigen>
 using Float = double;
 
-using Point2 = Eigen::Vector2d;
+using Point2f = Eigen::Matrix<Float, 2, 1, 0>;
 using Vector = Eigen::Matrix<Float, -1, 1, 0>;
 using Matrix = Eigen::Matrix<Float, -1, -1, 0>;
 

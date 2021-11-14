@@ -112,10 +112,83 @@ class Union :Domain<T>
 {
 public:
 	Union(const Domain<T>& domain1, const Domain<T>& domain2) :domain_1(domain1), domain_2(domain2) {}
-	bool Inside(const T& value) const override;
+
+	bool Inside(const T& value) const override
+	{
+		return domain_1.Inside(value) || domain_2.Inside(value);
+	}
+
 	T RandomSample(Float& pdf) const override;
 
 private:
 	Domain<T> domain_1;
 	Domain<T> domain_2;
+};
+
+class RectDomain :public Domain<Point2f>
+{
+public:
+	RectDomain(Point2f p1, Point2f p2)
+	{
+		x_axis = Interval(p1.x(), p2.x());
+		y_axis = Interval(p1.y(), p2.y());
+	}
+	bool Inside(const Point2f& value) const override
+	{
+		return x_axis.Inside(value.x()) && y_axis.Inside(value.y());
+	}
+
+	Point2f RandomSample(Float& pdf) const override
+	{
+		Float pdf_x;
+		Float pdf_y;
+		Float  x = x_axis.RandomSample(pdf_x);
+		Float  y = x_axis.RandomSample(pdf_y);
+		pdf = pdf_x * pdf_y;
+		return Point2f(x, y);
+	}
+private:
+
+	Interval x_axis;
+	Interval y_axis;
+};
+
+class SphereDomain :public Domain<Point2f>
+{
+public:
+
+	bool Inside(const Point2f& value) const override
+	{
+		return true;
+	}
+
+	/**
+	 * \brief Uniform sampling in a sphere
+	 * \param pdf
+	 * \return (theta,phi)
+	 */
+	Point2f RandomSample(Float& pdf) const override
+	{
+		Eigen::Vector3f vec = UniformSampleSphere(rect_domain.RandomSample(pdf));
+		pdf *= 1. / 4.0 / Pi;
+
+		return Point2f(SphericalTheta(vec), SphericalPhi(vec));
+	}
+	static Eigen::Vector3f UniformSampleSphere(const Point2f& u) {
+		Float z = 1 - 2 * u[0];
+		Float r = std::sqrt(std::max((Float)0, (Float)1 - z * z));
+		Float phi = 2 * Pi * u[1];
+		return Eigen::Vector3f(r * std::cos(phi), r * std::sin(phi), z);
+	}
+
+	static Float SphericalTheta(const Eigen::Vector3f& v) {
+		return std::acos(Clamp(v.z(), -1, 1));
+	}
+
+	static Float SphericalPhi(const Eigen::Vector3f& v) {
+		Float p = std::atan2(v.y(), v.x());
+		return (p < 0) ? (p + 2 * Pi) : p;
+	}
+	//For saving sample parameters for Rectdomain
+	RectDomain rect_domain = RectDomain(Point2f(0, 0), Point2f(1, 1));
 };

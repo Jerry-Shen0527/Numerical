@@ -13,7 +13,7 @@ enum class Result
 class Interpolation
 {
 public:
-	Interpolation(const std::vector<Point2>& points) :Points(points) {  }
+	Interpolation(const std::vector<Point2f>& points) :Points(points) {  }
 
 	virtual Result error_bound(Float& error_b) = 0;
 
@@ -22,7 +22,7 @@ public:
 
 	virtual  Float operator() (Float in_val) = 0;
 protected:
-	std::vector<Point2> Points;
+	std::vector<Point2f> Points;
 };
 
 class RadialInterpolation : public Interpolation
@@ -38,8 +38,8 @@ public:
 		{
 			if (Points.size() > 1)
 			{
-				auto iter_max = std::max_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
-				auto iter_min = std::min_element(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+				auto iter_max = std::max_element(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
+				auto iter_min = std::min_element(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
 				d = (iter_max->x() - iter_min->x()) / Points.size();
 				d = d * d;
 			}
@@ -154,7 +154,7 @@ public:
 	void evaluate() override;
 	Float operator()(Float in_val) override;
 
-	void addPoint(const Point2& point)
+	void addPoint(const Point2f& point)
 	{
 		Points.push_back(point);
 	}
@@ -206,14 +206,14 @@ class HermitePolynomial :public Interpolation
 {
 public:
 
-	HermitePolynomial(const std::vector<Point2>& points, const std::vector<Point2>& derivatives)
+	HermitePolynomial(const std::vector<Point2f>& points, const std::vector<Point2f>& derivatives)
 		:Interpolation(points), derivatives(derivatives) {	}
 	Result error_bound(Float& error_b) override;
 	void evaluate() override;
 	Float operator()(Float in_val) override;
 
 private:
-	std::vector<Point2> derivatives;
+	std::vector<Point2f> derivatives;
 };
 
 class SplineInterpolation :public Interpolation
@@ -229,7 +229,7 @@ public:
 class BezierSplineInterpolation :public Interpolation
 {
 public:
-	BezierSplineInterpolation(const std::vector<Point2>& points)
+	BezierSplineInterpolation(const std::vector<Point2f>& points)
 		: Interpolation(points)
 	{
 	}
@@ -256,7 +256,7 @@ public:
 		int mat_size = point_count * 3 - 2;
 		matrix = SparseMatrix<Float>(mat_size, mat_size);
 
-		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+		std::sort(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
 
 		Interval interval(Points[0].x(), Points.back().x());
 		std::vector< Triplet<Float>> triplets;
@@ -345,13 +345,13 @@ public:
 				{
 					return rst[0];
 				}
-				std::vector<Point2> bezier_points(4);
+				std::vector<Point2f> bezier_points(4);
 
 				auto diff = Points[i + 1].x() - Points[i].x();
 
 				for (int j = 0; j < 4; ++j)
 				{
-					bezier_points[j] = Point2(Points[i].x() + j * (diff) / 3.0, rst[3 * i + j]);
+					bezier_points[j] = Point2f(Points[i].x() + j * (diff) / 3.0, rst[3 * i + j]);
 				}
 
 				BezierApproximation bezier(bezier_points);
@@ -367,13 +367,13 @@ public:
 
 	Vector rst;
 
-	std::vector<std::vector<Point2>> parts;
+	std::vector<std::vector<Point2f>> parts;
 };
 
 class BSplineInterpolation :public Interpolation
 {
 public:
-	explicit BSplineInterpolation(const std::vector<Point2>& matrices)
+	explicit BSplineInterpolation(const std::vector<Point2f>& matrices)
 		: Interpolation(matrices)
 	{
 	}
@@ -389,7 +389,7 @@ public:
 		{
 			return;
 		}
-		std::sort(Points.begin(), Points.end(), [](const Point2& a, const Point2& b) {return a.x() < b.x(); });
+		std::sort(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
 
 		interval = Interval(Points.front().x(), Points.back().x());
 		interval.SetPartitionCount(Points.size());
@@ -446,5 +446,5 @@ public:
 
 	Interval interval;
 
-	std::vector<Point2> DeBoorPoints;
+	std::vector<Point2f> DeBoorPoints;
 };

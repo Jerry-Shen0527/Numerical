@@ -5,6 +5,7 @@
 #include <Eigen/Eigen>
 
 #include "FEM/FEM1DApp.hpp"
+#include "FEM/FEM2DApp.hpp"
 #include "imgui/implot.h"
 #include "Visualization/Visualizer.h"
 
@@ -13,7 +14,7 @@
 using Linear = PolynomialFEMApp<1>;
 using Quadratic = PolynomialFEMApp<2>;
 
-class FEM1DVisualizer :public Visualizer
+class FEM2DVisualizer :public Visualizer
 {
 protected:
 
@@ -115,7 +116,7 @@ public:
 		}
 	}
 
-	FEM1DVisualizer() {
+	FEM2DVisualizer() {
 		CalcAccurateRst();
 		segemnt = 16;
 		Float L1, L2, L_inf;
@@ -179,7 +180,7 @@ public:
 
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
 
-void FEM1DVisualizer::Control_UI()
+void FEM2DVisualizer::Control_UI()
 {
 	if (ImGui::SliderInt("Number of segments", &segemnt, 2, 200))
 	{
@@ -197,7 +198,7 @@ void FEM1DVisualizer::Control_UI()
 	}
 }
 
-void FEM1DVisualizer::draw(bool* p_open)
+void FEM2DVisualizer::draw(bool* p_open)
 {
 	if (ImGui::BeginTabBar("FEM 1D App")) {
 		if (ImGui::BeginTabItem("FEM1D"))
@@ -248,6 +249,6 @@ void FEM1DVisualizer::draw(bool* p_open)
 
 int main()
 {
-	FEM1DVisualizer visualizer;
+	FEM2DVisualizer visualizer;
 	visualizer.RenderLoop();
 }
