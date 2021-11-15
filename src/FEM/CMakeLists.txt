@@ -1,4 +1,4 @@
 Ubpa_AddTarget(
   MODE STATIC
-  LIB Eigen3::Eigen
+  LIB Eigen3::Eigen OpenMeshCore
 ) 

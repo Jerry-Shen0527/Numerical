@@ -26,6 +26,19 @@ if(NOT Eigen3_FOUND)
   message(STATUS "Eigen3 build done")
 endif()
 
+message(STATUS "find package: open_mesh")
+find_package(OpenMesh QUIET)
+if(NOT OpenMesh_FOUND)
+  message(STATUS "Building OpenMesh")
+  set(_address "https://www.graphics.rwth-aachen.de:9000/OpenMesh/OpenMesh.git")
+  message(STATUS "fetch: ${_address}")
+  FetchContent_Declare(
+    OpenMesh
+    GIT_REPOSITORY ${_address}
+  )
+  FetchContent_MakeAvailable(OpenMesh)
+  message(STATUS "OpenMesh build done")
+endif()
 
 message(STATUS "find package: assimp")
 find_package(Assimp QUIET)
@@ -38,7 +51,7 @@ if(NOT Assimp_FOUND)
     GIT_REPOSITORY ${_address}
   )
   FetchContent_MakeAvailable(assimp)
-  message(STATUS "Eigen3 build done")
+  message(STATUS "Assimp build done")
 endif()
 
 message("eigen3 is at ${Eigen3_SOURCE_DIR}")

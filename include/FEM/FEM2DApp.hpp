@@ -3,20 +3,62 @@
 
 #include "Geometry/Mesh/HEMesh.hpp"
 
+#include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
+
 class StaticFEM2D :public StaticFEM
 {
 protected:
-	void SetMatSize() override;
 	void FillMatrix() override;
 	void FillRhs() override;
+
+public:
+	virtual Float Value(int i, Eigen::Vector2f vector) = 0;
+};
+
+class StaticFEM2DApp :public StaticFEM2D
+{
+public:
+	Float Value(int i, Eigen::Vector2f vector) override;
+protected:
+	void SetMatSize() override;
 	Float GradientInnerProduct(int i, int j) override;
 	Float SelfInnerProduct(int i, int j) override;
 	Float GradientSelfInnerProduct(int i, int j) override;
 	Float RHSInnerProduct(int i) override;
-	std::vector<int> RelatedFuncIdx(int idx) override;
-};
 
-class FEM2DApp :public StaticFEM2D
-{
+	std::vector<int> RelatedFuncIdx(int idx) override
+	{
+		std::vector<int> ret;
+		std::vector<int> foo_id;
 
+		auto MeshIds = IdxToMesh(idx, foo_id);
+
+		std::set<int> set_ret;
+
+		for (auto mesh_id : MeshIds)
+		{
+			for (int i = 0; i < ShapeFunctions.size(); ++i)
+			{
+				int idx;
+				if (MeshToIdx(mesh_id, i, idx))
+				{
+					set_ret.emplace(idx);
+				}
+			}
+		}
+		ret.assign(set_ret.begin(), set_ret.end());
+		return ret;
+	}
+
+	virtual std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) = 0;
+	virtual bool MeshToIdx(int mesh_idx, int shapefun_idx, int& idx) = 0;
+
+	std::vector<std::function<Float(Eigen::Vector2f)>> ShapeFunctions;
+	std::vector<std::function<Eigen::Vector2f(Eigen::Vector2f)>> ShapeFunctionGradients;
+
+private:
+	using FEM2DMesh = OpenMesh::PolyMesh_ArrayKernelT<>;
+
+private:
+	FEM2DMesh mesh;
 };
