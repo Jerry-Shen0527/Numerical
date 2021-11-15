@@ -15,7 +15,7 @@ protected:
 };
 
 //This is definitely a bad idea
-template<int k>
+template<int k, bool Interpolate_EndPoints = true>
 class BSplineApproximation :public Approximation
 {
 public:
@@ -26,7 +26,7 @@ public:
 
 	void evaluate() override
 	{
-		if (Points.size() < k)
+		if (Points.size() <= k)
 		{
 			return;
 		}
@@ -35,48 +35,54 @@ public:
 
 		Interval interval(Points.front().x(), Points.back().x());
 
-		knot_vector.resize(Points.size() - k + 2);
-
-		for (int i = 0; i < Points.size() - k + 2; ++i)
+		if (Interpolate_EndPoints)
 		{
-			knot_vector[i] = interval.lerp(Float(i) / (Points.size() - k + 1));
+			knot_vector.resize(Points.size() - k + 1);
+
+			for (int i = 0; i < Points.size() - k + 1; ++i)
+			{
+				knot_vector[i] = interval.lerp(Float(i) / (Points.size() - k));
+			}
+			for (int i = 0; i < k - 1; ++i)
+			{
+				knot_vector.insert(knot_vector.begin(), knot_vector.front());
+				knot_vector.push_back(knot_vector.back());
+			}
 		}
-
-		for (int i = 0; i < k - 1; ++i)
+		else
 		{
-			knot_vector.insert(knot_vector.begin(), knot_vector.front());
-			knot_vector.push_back(knot_vector.back());
+			knot_vector.resize(Points.size() + k - 1);
+			for (int i = 0; i < Points.size() + k - 1; ++i)
+			{
+				knot_vector[i] = interval.lerp(Float(i) / (Points.size() + k - 2));
+			}
 		}
 	}
 
 	Float operator()(Float t) override
 	{
-		if (Points.size() < k)
+		if (Points.size() <= k)
 		{
 			return 0;
 		}
 
-		if (t <= Points.begin()->x())
+		if (t <= knot_vector[k - 1])
+			t = knot_vector[k - 1] + std::numeric_limits<Float>::epsilon();
+		if (t >= knot_vector[knot_vector.size() - k ])
+			t = knot_vector[knot_vector.size() - k ];
+
+		auto iter = std::find_if(knot_vector.begin(), knot_vector.end(), [t](Float knot) {return  knot >= t; });
+
+		int r = std::distance(knot_vector.begin(), iter);
+
+		std::vector<Point2f> tower(std::next(Points.begin(), r - k), std::next(Points.begin(), r + 1));
+
+		for (int j = 1; j <= k; ++j)
 		{
-			return Points.front().y();
-		}
-		if (t >= Points.back().x())
-		{
-			return Points.back().y();
-		}
-
-		auto iter = std::find_if(knot_vector.begin(), knot_vector.end(), [t](Float knot) {return  knot > t; });
-
-		int r = std::distance(knot_vector.begin(), iter) - 1;
-
-		std::vector<Point2f> tower(std::next(Points.begin(), r - k + 1), std::next(Points.begin(), r + 1));
-
-		for (int j = 1; j <= k - 1; ++j)
-		{
-			for (int i = r; i >= r - k + 1 + j; --i)
+			for (int i = r; i >= r - k + j; --i)
 			{
-				int index = i - (r - k + 1);
-				float alpha = (t - knot_vector[i]) / (knot_vector[i + k - j] - knot_vector[i]);
+				int index = i - (r - k);
+				float alpha = (t - knot_vector[i-1]) / (knot_vector[i + k - j] - knot_vector[i-1]);
 				tower[index] = Lerp(alpha, tower[index - 1], tower[index]);
 			}
 		}

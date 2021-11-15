@@ -113,7 +113,7 @@ public:
 				points.emplace_back(i * h, control_points[i][dim_i]);
 			}
 
-			BSplineApproximation<4> bezier(points);
+			BSplineApproximation<3,false> bezier(points);
 			bezier.evaluate();
 			function[dim_i] = bezier;
 		}

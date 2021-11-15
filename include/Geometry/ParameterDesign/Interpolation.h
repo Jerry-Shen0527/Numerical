@@ -251,15 +251,14 @@ public:
 			rst[0] = Points[0].y();
 			return;
 		}
-		using namespace Eigen;
 		int point_count = Points.size();
 		int mat_size = point_count * 3 - 2;
-		matrix = SparseMatrix<Float>(mat_size, mat_size);
+		matrix = Eigen::SparseMatrix<Float>(mat_size, mat_size);
 
 		std::sort(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {return a.x() < b.x(); });
 
 		Interval interval(Points[0].x(), Points.back().x());
-		std::vector< Triplet<Float>> triplets;
+		std::vector<Eigen::Triplet<Float>> triplets;
 
 		for (int i = 1; i < point_count - 1; ++i)
 		{
@@ -323,7 +322,7 @@ public:
 			rhs[3 * i] = Points[i].y();
 		}
 
-		SparseLU<Eigen::SparseMatrix<Float>> solver;
+		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
 		solver.compute(matrix);
 
 		rst = solver.solve(rhs);
@@ -395,9 +394,8 @@ public:
 		interval.SetPartitionCount(Points.size());
 
 		int mat_size = Points.size() + 3;
-		using namespace Eigen;
 		rst = Vector(mat_size);
-		matrix = SparseMatrix<Float>(mat_size, mat_size);
+		matrix = Eigen::SparseMatrix<Float>(mat_size, mat_size);
 
 		std::vector<Float> s_vector(mat_size + 4);
 
@@ -413,7 +411,7 @@ public:
 			s_vector[i] = value;
 		}
 
-		std::vector<Triplet<Float>> triplets;
+		std::vector<Eigen::Triplet<Float>> triplets;
 
 		triplets.emplace_back(0, 0, 1);
 		triplets.emplace_back(mat_size - 1, mat_size - 1, 1);
@@ -435,7 +433,7 @@ public:
 		{
 			return 0;
 		}
-		BSplineApproximation<4> bspline(DeBoorPoints);
+		BSplineApproximation<4,false> bspline(DeBoorPoints);
 
 		return bspline(in_val);
 	}

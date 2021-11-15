@@ -1,6 +1,8 @@
 #pragma once
 #include"FEM.hpp"
 
+#include "Geometry/Mesh/HEMesh.hpp"
+
 class StaticFEM2D :public StaticFEM
 {
 protected:

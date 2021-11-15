@@ -21,14 +21,22 @@ protected:
 
 	void evaluate_bezier()
 	{
+		points.emplace_back(-2, -10);
+		points.emplace_back(-4, 2);
+		points.emplace_back(6, 5);
+		points.emplace_back(4, -7);
+
 		BSplineCurve bezier(points);
 		bezier.evaluate();
-		//Bezier bezier(points);
+
+		std::cout << bezier(1.);
+
 		for (int i = 0; i < Length; ++i)
 		{
 			xs[i] = bezier(ctr_points[i]).x();
 			ys[i] = bezier(ctr_points[i]).y();
 		}
+
 		ctr_xs.resize(points.size());
 		ctr_ys.resize(points.size());
 
@@ -86,7 +94,7 @@ void BezierVisualizer::draw(bool* p_open)
 		if (ImGui::BeginTabItem("Interpolation"))
 		{
 			if (ImPlot::BeginPlot("Line Plot", "x", "f(x)", ImGui::GetContentRegionAvail(), ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMenus)) {
-				ImPlot::PlotLine("Bezier", &xs[0], &ys[0], Length);
+				ImPlot::PlotLine("Bezier", &xs[0], &ys[0], xs.size());
 				if (!ctr_xs.empty())
 				{
 					ImPlot::PlotLine("ControlBox", &ctr_xs[0], &ctr_ys[0], ctr_xs.size());
