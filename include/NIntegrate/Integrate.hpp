@@ -4,14 +4,14 @@
 #include <RNG.hpp>
 #include <MathFunctions.h>
 
-template<typename T>
+template <typename T>
 class Integrate
 {
 public:
 	Integrate();
 	virtual ~Integrate();
 
-	virtual Float operator() (const std::function<Float(T)>& func, const Domain<T>& domain) = 0;
+	virtual Float operator()(const std::function<Float(T)>& func, const Domain<T>& domain) = 0;
 
 protected:
 	/**
@@ -20,22 +20,22 @@ protected:
 	Float precision;
 };
 
-template<typename T>
+template <typename T>
 Integrate<T>::Integrate()
 {
 }
 
-template<typename T>
+template <typename T>
 Integrate<T>::~Integrate()
 {
 }
 
-class SubdivIntegrate :public Integrate<Float>
+class SubdivIntegrate : public Integrate<Float>
 {
 public:
 	Float operator()(const std::function<Float(Float)>& func, const Domain<Float>& domain) override
 	{
-		Interval interval = static_cast<const Interval&>(domain);
+		auto interval = static_cast<const Interval&>(domain);
 		Float ret = 0;
 
 		for (int i = 0; i < interval.GetPartitionCount(); ++i)
@@ -49,7 +49,7 @@ public:
 	virtual Float integrate(const std::function<Float(Float)>& func, const Interval& interval) const = 0;
 };
 
-class TrapeziumIntegrate :public SubdivIntegrate
+class TrapeziumIntegrate : public SubdivIntegrate
 {
 private:
 	Float integrate(const std::function<Float(Float)>& func, const Interval& interval) const override
@@ -58,18 +58,21 @@ private:
 	}
 };
 
-class SimpsonIntegrate :public SubdivIntegrate
+class SimpsonIntegrate : public SubdivIntegrate
 {
 	Float integrate(const std::function<Float(Float)>& func, const Interval& interval) const override
 	{
-		return (func(interval.lerp(0.0)) + 4.0 * func(interval.lerp(0.5)) + func(interval.lerp(1.0))) * interval.length() / 6.0;
+		return (func(interval.lerp(0.0)) + 4.0 * func(interval.lerp(0.5)) + func(interval.lerp(1.0))) * interval.
+			length() / 6.0;
 	}
 };
 
-class GaussIntegrate :public SubdivIntegrate
+class GaussIntegrate : public SubdivIntegrate
 {
 public:
-	GaussIntegrate() {}
+	GaussIntegrate()
+	{
+	}
 
 	Float integrate(const std::function<Float(Float)>& func, const Interval& interval) const override
 	{
@@ -83,18 +86,50 @@ public:
 		ret += func(interval.lerp(0.5)) * A0;
 		ret += A1 * (func(interval.lerp(0.5 + x1 / 2.0)) + func(interval.lerp(0.5 - x1 / 2.0)));
 		ret += A2 * (func(interval.lerp(0.5 + x2 / 2.0)) + func(interval.lerp(0.5 - x2 / 2.0)));
-		return  ret * interval.length() / 2.0;
+		return ret * interval.length() / 2.0;
 	}
 };
 
-Float L2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2, const Interval& interval)
+Float L2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
+                     const Interval& interval)
 {
-	auto func = [&](Float val) {return func1(val) * func2(val); };
+	auto func = [&](Float val) { return func1(val) * func2(val); };
 	return GaussIntegrate()(func, interval);
 }
 
-Float WeightedL2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2, const std::function<Float(Float)>& weight, const Interval& interval)
+Float WeightedL2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
+                             const std::function<Float(Float)>& weight, const Interval& interval)
 {
-	auto func = [&](Float val) {return func1(val) * func2(val) * weight(val); };
+	auto func = [&](Float val) { return func1(val) * func2(val) * weight(val); };
 	return GaussIntegrate()(func, interval);
 }
+
+class GaussIntegrate2D : public Integrate<Eigen::Vector2d>
+{
+public:
+	Float operator()(const std::function<Float(Eigen::Vector2d)>& func,
+	                 const Domain<Eigen::Vector2d>& domain) override
+	{
+		//TODO: Restrict this integration to triangles
+		auto triangle = static_cast<const TriangleDomain&>(domain);
+		triangle
+	}
+
+private:
+	constexpr static Float omegas[7] = {
+		0.2250000000000002, 0.1323941527885061, 0.1323941527885061, 0.1323941527885061, 0.1259391805448272,
+		0.1259391805448272, 0.1259391805448272
+	};
+	constexpr static Float gauss_x[7] = {
+		0.3333333333333333, 0.0597158717897698, 0.4701420641051151, 0.4701420641051151, 0.7974269853530873,
+		0.1012865073234563, 0.1012865073234563
+	};
+	constexpr static Float gauss_y[7] = {
+		0.3333333333333333, 0.4701420641051151, 0.4701420641051151, 0.0597158717897698, 0.1012865073234563,
+		0.1012865073234563, 0.7974269853530873
+	};
+	constexpr static Float gauss_z[7] = {
+		0.3333333333333333, 0.4701420641051151, 0.0597158717897698, 0.4701420641051151, 0.1012865073234563,
+		0.7974269853530873, 0.1012865073234563
+	};
+};

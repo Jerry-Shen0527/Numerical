@@ -16,6 +16,10 @@ using Quadratic = PolynomialFEMApp<2>;
 
 class FEM2DVisualizer :public Visualizer
 {
+public:
+	FEM2DVisualizer(const StaticFEM2DApp::FEM2DMesh& mesh) :app(mesh) {}
+
+	StaticFEM2DApp app;
 protected:
 
 	void evaluate()
@@ -142,12 +146,12 @@ public:
 			linear_Linf.push_back(L_inf);
 			error(precise_val, quadratic_val, L1, L2, L_inf);
 
-						if (segemnt == 16)
+			if (segemnt == 16)
 			{
 				cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
 			}
 			else
-				cout << segemnt << '&' << L1 << '&' <<- log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
+				cout << segemnt << '&' << L1 << '&' << -log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
 
 			quadratic_L1.push_back(L1);
 			quadratic_L2.push_back(L2);
@@ -246,9 +250,13 @@ void FEM2DVisualizer::draw(bool* p_open)
 
 	ImGui::End();
 }
-
+#include <OpenMesh/Core/IO/MeshIO.hh>
 int main()
 {
-	FEM2DVisualizer visualizer;
+	using Mesh = StaticFEM2DApp::FEM2DMesh;
+	StaticFEM2DApp::FEM2DMesh mesh;
+	std::cout << OpenMesh::IO::read_mesh(mesh, "gd0.obj");
+
+	FEM2DVisualizer visualizer(mesh);
 	visualizer.RenderLoop();
 }

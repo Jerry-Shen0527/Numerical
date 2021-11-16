@@ -1,8 +1,8 @@
 #pragma once
+#include <set>
+
 #include"FEM.hpp"
-
-#include "Geometry/Mesh/HEMesh.hpp"
-
+#define _USE_MATH_DEFINES
 #include <OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh>
 
 class StaticFEM2D :public StaticFEM
@@ -18,6 +18,10 @@ public:
 class StaticFEM2DApp :public StaticFEM2D
 {
 public:
+	using FEM2DMesh = OpenMesh::PolyMesh_ArrayKernelT<>;
+
+	StaticFEM2DApp(const FEM2DMesh& mesh) :mesh_(mesh) {}
+
 	Float Value(int i, Eigen::Vector2f vector) override;
 protected:
 	void SetMatSize() override;
@@ -56,9 +60,15 @@ protected:
 	std::vector<std::function<Float(Eigen::Vector2f)>> ShapeFunctions;
 	std::vector<std::function<Eigen::Vector2f(Eigen::Vector2f)>> ShapeFunctionGradients;
 
-private:
-	using FEM2DMesh = OpenMesh::PolyMesh_ArrayKernelT<>;
+protected:
+	FEM2DMesh mesh_;
+};
 
-private:
-	FEM2DMesh mesh;
+class StaticFEM2DAppPoly :public StaticFEM2DApp
+{
+	StaticFEM2DAppPoly(const FEM2DMesh& mesh) :StaticFEM2DApp(mesh) {}
+
+protected:
+	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override;
+	bool MeshToIdx(int mesh_idx, int shapefun_idx, int& idx) override;
 };

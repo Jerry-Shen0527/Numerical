@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Tools/spherical_harmonics.h"
+#include "Tools/SphereHarmonics/spherical_harmonics.h"
 
 #include <corecrt_math_defines.h>
 #include <iostream>

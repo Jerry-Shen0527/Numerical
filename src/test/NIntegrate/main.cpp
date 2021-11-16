@@ -11,4 +11,12 @@ int main()
 	//interval.SetPartitionCount(10);
 
 	//std::cout << gauss(func, interval);
+
+	GaussIntegrate2D gauss;
+	TriangleDomain domain;
+	Float shit;
+	std::cout << domain.RandomSample(shit);
+	auto func = [](Eigen::Vector2f vector) { return static_cast<Float>(1.0); };
+
+	std::cout << gauss(func, domain);
 }

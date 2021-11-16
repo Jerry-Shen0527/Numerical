@@ -593,5 +593,4 @@ void Visualizer::drawDefault(bool* p_open)
 		ImGui::TextWrapped("WARNING: ImDrawIdx is 16-bit and ImGuiBackendFlags_RendererHasVtxOffset is false. Expect visual glitches and artifacts! See README for more information.");
 		ImGui::PopStyleColor();
 	}
-
 }
