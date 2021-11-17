@@ -53,15 +53,19 @@ bool StaticFEM2DAppP1::MeshToIdx(int mesh_idx, int shapefun_idx, int& idx)
 {
 	auto face_handle = mesh_.face_handle(mesh_idx);
 
-	auto vertices = mesh_.fv_ccw_range(face_handle);
+	auto face_vertices = mesh_.fv_ccw_range(face_handle);
 
-	auto indices = vertices.to_vector([](OpenMesh::SmartVertexHandle handle) {return handle.idx(); });
+	auto indices = face_vertices.to_vector([](OpenMesh::SmartVertexHandle handle) {return handle.idx(); });
 
 	std::sort(indices.begin(), indices.end());
+	int non_zero_id = indices[shapefun_idx];
 
-	if (true)
+	for (auto face_vertex : face_vertices)
 	{
-		
+		if (face_vertex.idx() == non_zero_id && face_vertex.is_boundary())
+		{
+			return false;
+		}
 	}
 
 	return true;

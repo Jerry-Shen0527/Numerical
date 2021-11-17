@@ -66,6 +66,7 @@ protected:
 
 class StaticFEM2DAppP1 :public StaticFEM2DApp
 {
+public:
 	StaticFEM2DAppP1(const FEM2DMesh& mesh) :StaticFEM2DApp(mesh) {}
 
 protected:

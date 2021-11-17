@@ -16,71 +16,20 @@ using Quadratic = PolynomialFEMApp<2>;
 
 class FEM2DVisualizer :public Visualizer
 {
-public:
-	FEM2DVisualizer(const StaticFEM2DApp::FEM2DMesh& mesh) :app(mesh) {}
+protected:
 
-	StaticFEM2DApp app;
+	StaticFEM2DAppP1 app;
 protected:
 
 	void evaluate()
 	{
-		int segement_ = segemnt;
-
-		//Homework 2
-		//auto rhs = [](Float x) {return  -4 - x + Power(x, 2) - Power(x, 3) + Power(x, 4) + Cos(x) - 2 * x * Cos(x) - 2 * Sin(x); };
-		//auto a = [](Float x) {return sin(x) + 2; };
-		//auto c = [](Float x) {return x * x + 1; };
-		auto rhs = [](Float x) {return  x; };
-		auto d = [this](Float x) {return epsilon; };
-		auto b = [](Float x) {return 1;	};
-		auto c = [](Float x) {return 0; };
-
-		Interval interval(0.0, 1.0);
-
-		if (use_shishkin)
-		{
-			Interval interval1(0.0, 1 - 2 * epsilon * log(segement_));
-			interval1.SetPartitionCount(segement_);
-			Interval interval2(1 - 2 * epsilon * log(segement_), 1.0);
-			interval2.SetPartitionCount(segement_);
-
-			std::vector<Float> knot_vector(2 * segement_ - 1);
-
-			for (int i = 0; i < segement_ - 1; ++i)
-			{
-				knot_vector[i] = interval1.SubInterval(i).lerp(1.0);
-				knot_vector[segement_ + i] = interval2.SubInterval(i).lerp(1.0);
-			}
-			if (segement_ > 1)
-				knot_vector[segement_ - 1] = interval1.SubInterval(segement_ - 1).lerp(1.0);
-
-			interval.SetSubIntervalKnots(knot_vector);
-		}
-		else
-			interval.SetPartitionCount(segement_);
-
-		Linear linear(rhs, d, b, c, interval);
-		Quadratic quadratic(rhs, d, b, c, interval);
-		linear.evaluate();
-		quadratic.evaluate();
-		for (int i = 0; i < Length; ++i)
-		{
-			quadratic_val[i] = quadratic.Value(1.0 / (Length - 1) * i);
-			linear_val[i] = linear.Value(1.0 / (Length - 1) * i);
-
-			quadratic_diff[i] = quadratic_val[i] - precise_val[i];
-			linear_diff[i] = linear_val[i] - precise_val[i];
-		}
+		app.evaluate();
 	}
 
 	void Control_UI();
 	void draw(bool* p_open) override;
 
-	std::vector<Point2f> points;
 	bool updated = true;
-	int segemnt = 16;
-	float epsilon = 1E-7;
-	bool use_shishkin = true;
 
 	void error(std::vector<float>& ref, std::vector<float>& eval, Float& L_1, Float& L_2, Float& L_inf)
 	{
@@ -101,65 +50,48 @@ protected:
 public:
 	void CalcAccurateRst()
 	{
-		Float h = 1.0 / (Length - 1);
-		for (int i = 0; i < Length; ++i)
-		{
-			xs[i] = i * h;
-
-			auto accurate_func = [this](Float x) {return -(-1 + exp(x / epsilon) + pow(x, 2) - exp(1 / epsilon) * pow(x, 2) + 2 * epsilon * (-1 + exp(x / epsilon) + x - exp(1 / epsilon) * x)) / (2. * (-1 + exp(1 / epsilon))); };
-
-			if (epsilon < 1E-2)
-			{
-				auto accurate_func = [this](Float x) {return -exp(1 / epsilon * (x - 1)) / 2. + x * epsilon + x * x / 2.; };
-				precise_val[i] = accurate_func(xs[i]);
-			}
-			else
-			{
-				precise_val[i] = accurate_func(xs[i]);
-			}
-		}
 	}
 
-	FEM2DVisualizer() {
+	FEM2DVisualizer(const StaticFEM2DApp::FEM2DMesh& mesh) :app(mesh) {
 		CalcAccurateRst();
-		segemnt = 16;
-		Float L1, L2, L_inf;
-		do
-		{
-			evaluate();
+		//segemnt = 16;
+		//Float L1, L2, L_inf;
+		//do
+		//{
+		//	evaluate();
 
-			error(precise_val, linear_val, L1, L2, L_inf);
+		//	error(precise_val, linear_val, L1, L2, L_inf);
 
-			using std::cout;
-			using std::endl;
+		//	using std::cout;
+		//	using std::endl;
 
-			//if (segemnt == 16)
-			//{
-			//	cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
-			//}
-			//else
-			//	cout << segemnt << '&' << L1 << '&' <<- log2(L1 / linear_L1.back()) << '&' << L2 << '&' << -log2(L2 / linear_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / linear_Linf.back()) << "\\\\" << endl;
+		//	//if (segemnt == 16)
+		//	//{
+		//	//	cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
+		//	//}
+		//	//else
+		//	//	cout << segemnt << '&' << L1 << '&' <<- log2(L1 / linear_L1.back()) << '&' << L2 << '&' << -log2(L2 / linear_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / linear_Linf.back()) << "\\\\" << endl;
 
-			pointcount.push_back(segemnt);
-			linear_L1.push_back(L1);
-			linear_L2.push_back(L2);
-			linear_Linf.push_back(L_inf);
-			error(precise_val, quadratic_val, L1, L2, L_inf);
+		//	pointcount.push_back(segemnt);
+		//	linear_L1.push_back(L1);
+		//	linear_L2.push_back(L2);
+		//	linear_Linf.push_back(L_inf);
+		//	error(precise_val, quadratic_val, L1, L2, L_inf);
 
-			if (segemnt == 16)
-			{
-				cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
-			}
-			else
-				cout << segemnt << '&' << L1 << '&' << -log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
+		//	if (segemnt == 16)
+		//	{
+		//		cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
+		//	}
+		//	else
+		//		cout << segemnt << '&' << L1 << '&' << -log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
 
-			quadratic_L1.push_back(L1);
-			quadratic_L2.push_back(L2);
-			quadratic_Linf.push_back(L_inf);
+		//	quadratic_L1.push_back(L1);
+		//	quadratic_L2.push_back(L2);
+		//	quadratic_Linf.push_back(L_inf);
 
-			segemnt *= 2;
-		} while (segemnt != 4096);
-		segemnt = 16;
+		//	segemnt *= 2;
+		//} while (segemnt != 4096);
+		//segemnt = 16;
 
 		evaluate();
 	}
@@ -186,20 +118,13 @@ static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs) { return Im
 
 void FEM2DVisualizer::Control_UI()
 {
-	if (ImGui::SliderInt("Number of segments", &segemnt, 2, 200))
-	{
-		segemnt = segemnt < 2 ? 2 : segemnt;
-		evaluate();
-	}
-	if (ImGui::SliderFloat("Epsilon", &epsilon, 1E-7, 1E-1, "%.8f", ImGuiSliderFlags_Logarithmic))
-	{
-		evaluate();
-		CalcAccurateRst();
-	}
-	if (ImGui::Checkbox("Use Shishkin", &use_shishkin))
-	{
-		evaluate();
-	}
+	//if (ImGui::SliderInt("Number of segments", &segemnt, 2, 200))
+	//{
+	//	segemnt = segemnt < 2 ? 2 : segemnt;
+	//	evaluate();
+	//}
+	evaluate();
+	CalcAccurateRst();
 }
 
 void FEM2DVisualizer::draw(bool* p_open)

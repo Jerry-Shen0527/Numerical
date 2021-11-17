@@ -143,3 +143,47 @@ private:
 		0.7974269853530873, 0.1012865073234563
 	};
 };
+
+template<int dim>
+class NDifferential
+{
+	using Vector = Eigen::Matrix<Float, dim, 1>;
+public:
+	std::function<Vector(Vector)> operator()(std::function<Float(Vector)> function)
+	{
+		return [function, this](Vector pos)
+		{
+			Float h = 0.01;
+
+			Vector temp_gradient;
+			temp_gradient.setZero();
+			for (int i = 0; i < dim; ++i)
+			{
+				Vector h_vec;
+				h_vec.setZero();
+				h_vec[i] = h;
+				temp_gradient[i] = 1.0 / 12 / h * (function(pos - 2 * h_vec) - 8 * function(pos - h_vec) + 8 * function(pos + h_vec) - function(pos + 2 * h_vec));
+			}
+
+			Vector another_temp_gradient;
+			another_temp_gradient.setZero();
+
+			do
+			{
+				h *= 0.5;
+				for (int i = 0; i < dim; ++i)
+				{
+					Vector h_vec;
+					h_vec.setZero();
+					h_vec[i] = h;
+					another_temp_gradient[i] = 1.0 / 12 / h * (function(pos - 2 * h_vec) - 8 * function(pos - h_vec) + 8 * function(pos + h_vec) - function(pos + 2 * h_vec));
+				}
+			} while ((another_temp_gradient - temp_gradient).norm() > bound);
+
+			return another_temp_gradient;
+		};
+	};
+
+private:
+	Float bound = 1E-8;
+};

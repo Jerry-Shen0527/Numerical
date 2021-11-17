@@ -1,4 +1,4 @@
 Ubpa_AddTarget(
-  TEST
   MODE STATIC
+  LIB Eigen3::Eigen
 ) 
