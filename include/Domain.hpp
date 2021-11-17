@@ -166,6 +166,8 @@ public:
 
 	bool Inside(const Eigen::Vector2d& value) const override
 	{
+		//TODO:Judge if a point is in the domain
+		return true;
 	}
 
 	static Point2f UniformSampleTriangle(const Point2f& u)
@@ -197,24 +199,47 @@ public:
 	Eigen::Vector2d p1;
 	Eigen::Vector2d p2;
 
-	//Scale a f([left,right]) to f([0,1]), remember to multiply the factor when scaling derivatives
+	//Scale a f(barycentric) to g(coordinates), remember to multiply the factor when scaling derivatives
 	std::function<Float(Eigen::Vector2d)> scale(const std::function<Float(Eigen::Vector2d)>& func, Float factor = 1.0)
 	{
-		return [factor, &func, this](Float val)
+		return [factor, &func, this](Eigen::Vector2d coord)
 		{
-			return factor * func((val - left) / length());
+			return factor * func(Barycentric(coord));
 		};
+	}
+
+	/**
+	 * \brief Remap barycentric to world space coordinates, remember to multiply the factor when scaling derivatives
+	 * \param func A standard function defined with barycentric coordinates
+	 * \param factor
+	 * \return A new function that takes
+	 */
+	std::function<Float(Eigen::Vector2d)> remap(const std::function<Float(Eigen::Vector2d)>& func, Float factor = 1.0)
+	{
+		return [factor, &func, this](Eigen::Vector2d bary)
+		{
+			return factor * func(Coordinates(bary));
+		};
+	}
+
+	//convert the Barycentric to coordinates.
+	Eigen::Vector2d Coordinates(Eigen::Vector2d barycentric)
+	{
+		Float alpha = barycentric.x();
+		Float beta = barycentric.y();
+
+		return alpha * p0 + beta * p1 + (1 - alpha - beta) * p2;
 	}
 
 	//convert the coordinates to Barycentric
 	Eigen::Vector2d Barycentric(Eigen::Vector2d coord)
 	{
-		float i = (-(coord.x() - p1.x()) * (p2.y() - p1.y()) + (coord.y() - p1.y()) * (p2.x() - p1.x())) /
+		Float i = (-(coord.x() - p1.x()) * (p2.y() - p1.y()) + (coord.y() - p1.y()) * (p2.x() - p1.x())) /
 			(-(p0.x() - p1.x()) * (p2.y() - p1.y()) + (p0.y() - p1.y()) * (p2.x() - p1.x()));
-		float j = (-(coord.x() - p2.x()) * (p0.y() - p2.y()) + (coord.y() - p2.y()) * (p0.x() - p2.x())) /
+		Float j = (-(coord.x() - p2.x()) * (p0.y() - p2.y()) + (coord.y() - p2.y()) * (p0.x() - p2.x())) /
 			(-(p1.x() - p2.x()) * (p0.y() - p2.y()) + (p1.y() - p2.y()) * (p0.x() - p2.x()));
-		
-		return (val - left) / length();
+
+		return Eigen::Vector2d(i, j);
 	}
 
 	RectDomain rect_domain = RectDomain(Point2f(0, 0), Point2f(1, 1));

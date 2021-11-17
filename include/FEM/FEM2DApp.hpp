@@ -64,9 +64,9 @@ protected:
 	FEM2DMesh mesh_;
 };
 
-class StaticFEM2DAppPoly :public StaticFEM2DApp
+class StaticFEM2DAppP1 :public StaticFEM2DApp
 {
-	StaticFEM2DAppPoly(const FEM2DMesh& mesh) :StaticFEM2DApp(mesh) {}
+	StaticFEM2DAppP1(const FEM2DMesh& mesh) :StaticFEM2DApp(mesh) {}
 
 protected:
 	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override;

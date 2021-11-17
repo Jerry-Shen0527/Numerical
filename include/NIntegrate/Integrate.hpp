@@ -91,14 +91,14 @@ public:
 };
 
 Float L2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
-                     const Interval& interval)
+	const Interval& interval)
 {
 	auto func = [&](Float val) { return func1(val) * func2(val); };
 	return GaussIntegrate()(func, interval);
 }
 
 Float WeightedL2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
-                             const std::function<Float(Float)>& weight, const Interval& interval)
+	const std::function<Float(Float)>& weight, const Interval& interval)
 {
 	auto func = [&](Float val) { return func1(val) * func2(val) * weight(val); };
 	return GaussIntegrate()(func, interval);
@@ -108,11 +108,21 @@ class GaussIntegrate2D : public Integrate<Eigen::Vector2d>
 {
 public:
 	Float operator()(const std::function<Float(Eigen::Vector2d)>& func,
-	                 const Domain<Eigen::Vector2d>& domain) override
+		const Domain<Eigen::Vector2d>& domain) override
 	{
 		//TODO: Restrict this integration to triangles
 		auto triangle = static_cast<const TriangleDomain&>(domain);
-		triangle
+
+		auto bary_func = triangle.scale(func);
+
+		Float ret = 0;
+
+		for (int i = 0; i < 7; ++i)
+		{
+			ret += omegas[i] * bary_func(Eigen::Vector2d(gauss_x[i], gauss_y[i]));
+		}
+		ret *= triangle.Area();
+		return ret;
 	}
 
 private:

@@ -15,8 +15,7 @@ int main()
 	GaussIntegrate2D gauss;
 	TriangleDomain domain;
 	Float shit;
-	std::cout << domain.RandomSample(shit);
-	auto func = [](Eigen::Vector2f vector) { return static_cast<Float>(1.0); };
+	auto func = [](Eigen::Vector2d vector) { return vector.x()*vector.x()*vector.y(); };
 
 	std::cout << gauss(func, domain);
 }
