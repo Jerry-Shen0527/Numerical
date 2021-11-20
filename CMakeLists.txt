@@ -54,6 +54,24 @@ if(NOT Assimp_FOUND)
   message(STATUS "Assimp build done")
 endif()
 
+set(DONUT_SHADERS_OUTPUT_DIR "${PROJECT_SOURCE_DIR}/bin/shaders/framework")
+
+message(STATUS "find package: donut")
+find_package(donut QUIET)
+if(NOT DONUT_FOUND)
+  message(STATUS "Building donut")
+  set(_address "https://github.com/NVIDIAGameWorks/donut.git")
+  message(STATUS "fetch: ${_address}")
+  FetchContent_Declare(
+    donut
+    GIT_REPOSITORY ${_address}
+    GIT_TAG main
+  )
+
+  FetchContent_MakeAvailable(donut)
+  message(STATUS "donut build done")
+endif()
+
 message("eigen3 is at ${Eigen3_SOURCE_DIR}")
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${Eigen3_SOURCE_DIR})

@@ -19,10 +19,21 @@ int main()
 
 	//std::cout << gauss(func, domain);
 
-	auto func = [](Eigen::Vector2d vector)->Float {return sin(vector.x()) * cos(vector.y()) * cos(vector.y()); };
+	TriangleDomain triangle;
 
-	NDifferential<2> differential;
-	auto gradient = differential(func);
+	auto func1 = [](Eigen::Vector3d vector)->Float
+	{
+		return vector.x();
+	};
+	auto func2 = [](Eigen::Vector3d vector)->Float { return vector.x(); };
 
-	std::cout << gradient(Eigen::Vector2d(0.5, 0.5));
+	using Eigen::Vector3d;
+	TriangleDomain triangle2(Vector3d(0, 0, 0), Vector3d(0.5, 0, 0), Vector3d(0, 0.5, 0));
+
+	NDifferential<3> gradient;
+
+	std::cout << L2InnerProduct2D<3>(gradient(func1), gradient(func2), triangle)<< std::endl;
+	std::cout << L2InnerProduct2D<3>(gradient(triangle2.remap(triangle.scale(func1))), gradient(triangle2.remap(triangle.scale(func2))), triangle2);
+
+	//std::cout << gradient(func1)(Eigen::Vector3d(0.5, 0.5,0));
 }

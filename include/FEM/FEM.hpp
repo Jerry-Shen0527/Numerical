@@ -17,7 +17,7 @@ public:
 		FillMatrix();
 		FillRhs();
 
-		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
+		Eigen::SimplicialLDLT<Eigen::SparseMatrix<Float>> solver;
 
 		solver.compute(matrix_);
 		rst = solver.solve(rhs);

@@ -82,7 +82,7 @@ public:
 	}
 
 	//Scale a f([left,right]) to f([0,1]), remember to multiply the factor when scaling derivatives
-	std::function<Float(Float)> scale(const std::function<Float(Float)>& func, Float factor = 1.0)
+	std::function<Float(Float)> remap(const std::function<Float(Float)>& func, Float factor = 1.0)
 	{
 		return [factor, &func, this](Float val)
 		{
@@ -153,18 +153,18 @@ private:
 	Interval y_axis;
 };
 
-class TriangleDomain : public Domain<Eigen::Vector2d>
+class TriangleDomain : public Domain<Eigen::Vector3d>
 {
 public:
-	TriangleDomain() : p0(0, 0), p1(1, 0), p2(0, 1)
+	TriangleDomain() : p0(0, 0, 0), p1(1, 0, 0), p2(0, 1, 0)
 	{
 	}
 
-	TriangleDomain(Eigen::Vector2d p0, Eigen::Vector2d p1, Eigen::Vector2d p2) : p0(p0), p1(p1), p2(p2)
+	TriangleDomain(Eigen::Vector3d p0, Eigen::Vector3d p1, Eigen::Vector3d p2) : p0(p0), p1(p1), p2(p2)
 	{
 	}
 
-	bool Inside(const Eigen::Vector2d& value) const override
+	bool Inside(const Eigen::Vector3d& value) const override
 	{
 		//TODO:Judge if a point is in the domain
 		return true;
@@ -178,62 +178,73 @@ public:
 
 	Float Area() const
 	{
-		Eigen::Vector2d l1 = p1 - p0;
-		Eigen::Vector2d l2 = p2 - p0;
-		return 0.5 * abs(l2.x() * l1.y() - l1.x() * l2.y());
+		Eigen::Vector3d l1 = p1 - p0;
+		Eigen::Vector3d l2 = p2 - p0;
+		return 0.5 * (l1.cross(l2)).norm();
 	}
 
-	Eigen::Vector2d RandomSample(Float& pdf) const override
+	Eigen::Vector3d RandomSample(Float& pdf) const override
 	{
 		Eigen::Vector2d u = rect_domain.RandomSample(pdf);
 
 		Point2f b = UniformSampleTriangle(u);
 
-		Eigen::Vector2d ret = b[0] * p0 + b[1] * p1 + (1 - b[0] - b[1]) * p2;
+		Eigen::Vector3d ret = b[0] * p0 + b[1] * p1 + (1 - b[0] - b[1]) * p2;
 		pdf /= Area();
 
 		return ret;
 	}
 
-	Eigen::Vector2d p0;
-	Eigen::Vector2d p1;
-	Eigen::Vector2d p2;
+	Eigen::Vector3d p0;
+	Eigen::Vector3d p1;
+	Eigen::Vector3d p2;
 
-	//Scale a f(barycentric) to g(coordinates), remember to multiply the factor when scaling derivatives
-	std::function<Float(Eigen::Vector2d)> scale(const std::function<Float(Eigen::Vector2d)>& func, Float factor = 1.0)
+	/**
+	 * \brief Remap barycentric space function to take world coordinates as inputs
+	 * \param func A standard function defined with barycentric coordinates
+	 * \param factor
+	 * \return A new function that takes world space coordinates as inputs
+	 */
+	std::function<Float(Eigen::Vector3d)> remap(const std::function<Float(Eigen::Vector2d)>& func, Float factor = 1.0)
 	{
-		return [factor, &func, this](Eigen::Vector2d coord)
+		return[factor, func, *this](Eigen::Vector3d coord)
 		{
-			return factor * func(Barycentric(coord));
+			return factor * func(Barycentric(coord)) * factor;
 		};
 	}
 
 	/**
-	 * \brief Remap barycentric to world space coordinates, remember to multiply the factor when scaling derivatives
+	 * \brief Remap world space function to take barycentric as inputs
 	 * \param func A standard function defined with barycentric coordinates
 	 * \param factor
-	 * \return A new function that takes
+	 * \return A new function that takes barycentric coordinates as inputs
 	 */
-	std::function<Float(Eigen::Vector2d)> remap(const std::function<Float(Eigen::Vector2d)>& func, Float factor = 1.0)
+	std::function<Float(Eigen::Vector2d)> scale(const std::function<Float(Eigen::Vector3d)>& func, Float factor = 1.0)
 	{
-		return [factor, &func, this](Eigen::Vector2d bary)
+		return[factor, func, *this](Eigen::Vector2d bary)
 		{
-			return factor * func(Coordinates(bary));
+			return factor * func(Coordinates(bary)) * factor;
 		};
 	}
 
 	//convert the Barycentric to coordinates.
-	Eigen::Vector2d Coordinates(Eigen::Vector2d barycentric)
+	Eigen::Vector3d Coordinates(Eigen::Vector2d barycentric) const
 	{
 		Float alpha = barycentric.x();
 		Float beta = barycentric.y();
 
-		return alpha * p0 + beta * p1 + (1 - alpha - beta) * p2;
+		Eigen::Vector3d ret = alpha * p0 + beta * p1 + (1 - alpha - beta) * p2;
+		return ret;
 	}
 
 	//convert the coordinates to Barycentric
-	Eigen::Vector2d Barycentric(Eigen::Vector2d coord)
+	Eigen::Vector2d Barycentric(Eigen::Vector3d coord) const
 	{
+		Eigen::Vector3d normal = (p2 - p0).cross(p1 - p0).normalized();
+		coord = coord - Eigen::Vector3d(coord - p0).dot(normal) * normal;
+		//std::cerr << (coord - p0).dot((p2 - p0).cross(p1 - p0))<< std::endl;
+		assert(abs((coord - p0).dot((p2 - p0).cross(p1 - p0))) < 1E-7);
+
 		Float i = (-(coord.x() - p1.x()) * (p2.y() - p1.y()) + (coord.y() - p1.y()) * (p2.x() - p1.x())) /
 			(-(p0.x() - p1.x()) * (p2.y() - p1.y()) + (p0.y() - p1.y()) * (p2.x() - p1.x()));
 		Float j = (-(coord.x() - p2.x()) * (p0.y() - p2.y()) + (coord.y() - p2.y()) * (p0.x() - p2.x())) /

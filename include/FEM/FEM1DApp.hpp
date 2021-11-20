@@ -33,8 +33,8 @@ protected:
 				if (i_mesh[a] == j_mesh[b])
 				{
 					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.scale(ShapeFunctions[i_id[a]]),
-						sub_interval.scale(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), b_func, sub_interval);
+					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctions[i_id[a]]),
+						sub_interval.remap(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), b_func, sub_interval);
 				}
 			}
 		}
@@ -56,8 +56,8 @@ protected:
 				if (i_mesh[a] == j_mesh[b])
 				{
 					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.scale(ShapeFunctionGradients[i_id[a]], 1.0 / sub_interval.length()),
-						sub_interval.scale(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), d_func, sub_interval);
+					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctionGradients[i_id[a]], 1.0 / sub_interval.length()),
+						sub_interval.remap(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), d_func, sub_interval);
 				}
 			}
 		}
@@ -80,7 +80,7 @@ protected:
 				if (i_mesh[a] == j_mesh[b])
 				{
 					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.scale(ShapeFunctions[i_id[a]]), sub_interval.scale(ShapeFunctions[j_id[b]]), c_func, sub_interval);
+					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctions[i_id[a]]), sub_interval.remap(ShapeFunctions[j_id[b]]), c_func, sub_interval);
 				}
 			}
 		}
@@ -98,7 +98,7 @@ protected:
 		for (int a = 0; a < func_id.size(); ++a)
 		{
 			auto sub_interval = interval.SubInterval(i_mesh[a]);
-			ret += L2InnerProduct(sub_interval.scale(ShapeFunctions[func_id[a]]), RHS_func, sub_interval);
+			ret += L2InnerProduct(sub_interval.remap(ShapeFunctions[func_id[a]]), RHS_func, sub_interval);
 		}
 
 		return ret;
@@ -148,7 +148,7 @@ public:
 					int idx;
 					if (MeshToIdx(i, j, idx))
 					{
-						ret += sub_interval.scale(ShapeFunctions[j])(x) * rst(idx);
+						ret += sub_interval.remap(ShapeFunctions[j])(x) * rst(idx);
 					}
 				}
 			}

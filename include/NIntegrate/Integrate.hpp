@@ -90,25 +90,25 @@ public:
 	}
 };
 
-Float L2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
+inline Float L2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
 	const Interval& interval)
 {
 	auto func = [&](Float val) { return func1(val) * func2(val); };
 	return GaussIntegrate()(func, interval);
 }
 
-Float WeightedL2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
+inline Float WeightedL2InnerProduct(const std::function<Float(Float)>& func1, const std::function<Float(Float)>& func2,
 	const std::function<Float(Float)>& weight, const Interval& interval)
 {
 	auto func = [&](Float val) { return func1(val) * func2(val) * weight(val); };
 	return GaussIntegrate()(func, interval);
 }
 
-class GaussIntegrate2D : public Integrate<Eigen::Vector2d>
+class GaussIntegrate2D : public Integrate<Eigen::Vector3d>
 {
 public:
-	Float operator()(const std::function<Float(Eigen::Vector2d)>& func,
-		const Domain<Eigen::Vector2d>& domain) override
+	Float operator()(const std::function<Float(Eigen::Vector3d)>& func,
+		const Domain<Eigen::Vector3d>& domain) override
 	{
 		//TODO: Restrict this integration to triangles
 		auto triangle = static_cast<const TriangleDomain&>(domain);
@@ -144,6 +144,57 @@ private:
 	};
 };
 
+
+inline Float L2InnerProduct2D(
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& func1,
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& func2,
+	const TriangleDomain& triangle)
+{
+	auto func = [&](Eigen::Matrix<Float, 3, 1> pos) { return func1(pos) * func2(pos); };
+	return GaussIntegrate2D()(func, triangle);
+}
+
+template<int dim>
+inline Float L2InnerProduct2D(
+	const std::function
+	<Eigen::Matrix<Float, dim, 1>(Eigen::Matrix<Float, 3, 1>)>& func1,
+	const std::function
+	<Eigen::Matrix<Float, dim, 1>(Eigen::Matrix<Float, 3, 1>)>& func2,
+	const TriangleDomain& triangle)
+{
+	auto func = [&](Eigen::Matrix<Float, 3, 1> pos) { return func1(pos).dot(func2(pos)); };
+	return GaussIntegrate2D()(func, triangle);
+}
+
+inline Float WeightedL2InnerProduct2D(
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& func1,
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& func2,
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& weight,
+	const TriangleDomain& triangle)
+{
+	auto func = [&](Eigen::Matrix<Float, 3, 1> pos) { return func1(pos) * func2(pos) * weight(pos); };
+	return GaussIntegrate2D()(func, triangle);
+}
+
+template<int dim>
+inline Float WeightedL2InnerProduct2D(
+	const std::function
+	<Eigen::Matrix<Float, dim, 1>(Eigen::Matrix<Float, 3, 1>)>& func1,
+	const std::function
+	<Eigen::Matrix<Float, dim, 1>(Eigen::Matrix<Float, 3, 1>)>& func2,
+	const std::function
+	<Float(Eigen::Matrix<Float, 3, 1>)>& weight,
+	const TriangleDomain& triangle)
+{
+	auto func = [&](Eigen::Matrix<Float, 3, 1> pos) { return func1(pos).dot(func2(pos)) * weight(pos); };
+	return GaussIntegrate2D()(func, triangle);
+}
+
 template<int dim>
 class NDifferential
 {
@@ -171,6 +222,7 @@ public:
 			do
 			{
 				h *= 0.5;
+				temp_gradient = another_temp_gradient;
 				for (int i = 0; i < dim; ++i)
 				{
 					Vector h_vec;
