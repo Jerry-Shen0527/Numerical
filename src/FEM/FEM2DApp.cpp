@@ -29,8 +29,6 @@ void StaticFEM2D::FillRhs()
 	{
 		rhs(i) = RHSInnerProduct(i);
 	}
-
-	std::cout << rhs << std::endl;
 }
 
 std::vector<int> StaticFEM2DAppP1::IdxToMesh(int idx, std::vector<int>& shapeFuncId)

@@ -257,10 +257,42 @@ public:
 	FEM2DVisualizer(DeviceManager* deviceManager, UIData& ui) :IRenderPass(deviceManager), m_ui(ui), fem_app(rhs_func, [](Eigen::Vector3d vector) {return 1.0; }, [](Eigen::Vector3d vector) {return 0.0; })
 	{
 	}
+	std::shared_ptr<NativeFileSystem> nativeFS;
+
+	void LoadSceneToGPU()
+	{
+		m_CommandList = GetDevice()->createCommandList();
+		m_CommandList->open();
+
+		nvrhi::BufferDesc vertexBufferDesc;
+		vertexBufferDesc.byteSize = sizeof(Vertex) * g_Vertices.size();
+		vertexBufferDesc.isVertexBuffer = true;
+		vertexBufferDesc.debugName = "VertexBuffer";
+		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		m_VertexBuffer = GetDevice()->createBuffer(vertexBufferDesc);
+
+		m_CommandList->beginTrackingBufferState(m_VertexBuffer, nvrhi::ResourceStates::CopyDest);
+		m_CommandList->writeBuffer(m_VertexBuffer, &g_Vertices[0], sizeof(Vertex) * g_Vertices.size());
+		m_CommandList->setPermanentBufferState(m_VertexBuffer, nvrhi::ResourceStates::VertexBuffer);
+
+		nvrhi::BufferDesc indexBufferDesc;
+		indexBufferDesc.byteSize = g_Indices.size() * sizeof(uint32_t);
+		indexBufferDesc.isIndexBuffer = true;
+		indexBufferDesc.debugName = "IndexBuffer";
+		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+		m_IndexBuffer = GetDevice()->createBuffer(indexBufferDesc);
+
+		m_CommandList->beginTrackingBufferState(m_IndexBuffer, nvrhi::ResourceStates::CopyDest);
+		m_CommandList->writeBuffer(m_IndexBuffer, &g_Indices[0], g_Indices.size() * sizeof(uint32_t));
+		m_CommandList->setPermanentBufferState(m_IndexBuffer, nvrhi::ResourceStates::IndexBuffer);
+
+		m_CommandList->close();
+		GetDevice()->executeCommandList(m_CommandList);
+	}
 
 	bool Init()
 	{
-		auto nativeFS = std::make_shared<vfs::NativeFileSystem>();
+		nativeFS = std::make_shared<vfs::NativeFileSystem>();
 
 		std::filesystem::path frameworkShaderPath = app::GetDirectoryWithExecutable() / "shaders/framework" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
 		std::filesystem::path appShaderPath = app::GetDirectoryWithExecutable() / "shaders/vertex_buffer" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
@@ -295,33 +327,7 @@ public:
 		engine::CommonRenderPasses commonPasses(GetDevice(), m_ShaderFactory);
 		engine::TextureCache textureCache(GetDevice(), nativeFS, nullptr);
 
-		m_CommandList = GetDevice()->createCommandList();
-		m_CommandList->open();
-
-		nvrhi::BufferDesc vertexBufferDesc;
-		vertexBufferDesc.byteSize = sizeof(Vertex) * g_Vertices.size();
-		vertexBufferDesc.isVertexBuffer = true;
-		vertexBufferDesc.debugName = "VertexBuffer";
-		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-		m_VertexBuffer = GetDevice()->createBuffer(vertexBufferDesc);
-
-		m_CommandList->beginTrackingBufferState(m_VertexBuffer, nvrhi::ResourceStates::CopyDest);
-		m_CommandList->writeBuffer(m_VertexBuffer, &g_Vertices[0], sizeof(Vertex) * g_Vertices.size());
-		m_CommandList->setPermanentBufferState(m_VertexBuffer, nvrhi::ResourceStates::VertexBuffer);
-
-		nvrhi::BufferDesc indexBufferDesc;
-		indexBufferDesc.byteSize = g_Indices.size() * sizeof(uint32_t);
-		indexBufferDesc.isIndexBuffer = true;
-		indexBufferDesc.debugName = "IndexBuffer";
-		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-		m_IndexBuffer = GetDevice()->createBuffer(indexBufferDesc);
-
-		m_CommandList->beginTrackingBufferState(m_IndexBuffer, nvrhi::ResourceStates::CopyDest);
-		m_CommandList->writeBuffer(m_IndexBuffer, &g_Indices[0], g_Indices.size() * sizeof(uint32_t));
-		m_CommandList->setPermanentBufferState(m_IndexBuffer, nvrhi::ResourceStates::IndexBuffer);
-
-		m_CommandList->close();
-		GetDevice()->executeCommandList(m_CommandList);
+		LoadSceneToGPU();
 
 		nvrhi::BindingSetDesc bindingSetDesc;
 		bindingSetDesc.bindings = {
@@ -573,6 +579,9 @@ public:
 
 		fem_app.evaluate();
 
+		g_Indices.clear();
+		g_Vertices.clear();
+
 		for (auto vertex : vertices)
 		{
 			auto point = mesh.point(vertex);
@@ -611,6 +620,8 @@ public:
 		m_CurrentSceneName = sceneName;
 
 		BeginLoadingScene(m_RootFs, m_CurrentSceneName);
+
+		LoadSceneToGPU();
 	}
 
 	std::shared_ptr<ShaderFactory> GetShaderFactory()

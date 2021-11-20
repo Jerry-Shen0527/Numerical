@@ -127,7 +127,7 @@ protected:
 
 		for (int a = 0; a < func_id.size(); ++a)
 		{
-			auto triangle = BuildTriangleElement(a);
+			auto triangle = BuildTriangleElement(i_mesh[a]);
 			ret += L2InnerProduct2D(triangle.remap(ShapeFunctions[func_id[a]]), RHS_func, triangle);
 		}
 
