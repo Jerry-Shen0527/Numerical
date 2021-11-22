@@ -22,15 +22,17 @@ public:
 		{
 			bezier_points.push_back(Eigen::Vector3d(control_points[i].x(), control_points[i].y(), weights[i]));
 		}
+		bezier = BezierCurveND<3>(bezier_points);
+		bezier.evaluate();
 	}
 
 	Eigen::Vector2d operator()(Float t) override
 	{
-		BezierCurveND<3> bezier(bezier_points);
-		bezier.evaluate();
 		auto p = bezier(t);
 		return Eigen::Vector2d(p.x() / p.z(), p.y() / p.z());
 	}
+
+	BezierCurveND<3> bezier;
 
 	std::vector<Float> weights;
 

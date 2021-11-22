@@ -12,6 +12,7 @@ protected:
 	std::function<Float(Float)> function[dim];
 
 public:
+	ParameterCurve() {}
 	virtual ~ParameterCurve() = default;
 	virtual void evaluate() = 0;
 
@@ -23,7 +24,7 @@ public:
 	{
 		if (!control_points.empty())
 		{
-			t = Clamp(t);
+			//t = Clamp(t);
 			T ret;
 			for (int i = 0; i < dim; ++i)
 			{
@@ -39,6 +40,7 @@ template <int dim>
 class BezierCurveND : public ParameterCurve<Eigen::Matrix<Float, dim, 1, 0>, dim>
 {
 public:
+	BezierCurveND() {}
 	explicit BezierCurveND(const std::vector<Eigen::Matrix<Float, dim, 1, 0>>& points)
 		: ParameterCurve<Eigen::Matrix<Float, dim, 1, 0>, dim>(points)
 	{
