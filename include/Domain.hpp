@@ -124,28 +124,28 @@ private:
 	Domain<T> domain_2;
 };
 
-class RectDomain : public Domain<Point2f>
+class RectDomain : public Domain<Point2d>
 {
 public:
-	RectDomain(Point2f p1, Point2f p2)
+	RectDomain(Point2d p1, Point2d p2)
 	{
 		x_axis = Interval(p1.x(), p2.x());
 		y_axis = Interval(p1.y(), p2.y());
 	}
 
-	bool Inside(const Point2f& value) const override
+	bool Inside(const Point2d& value) const override
 	{
 		return x_axis.Inside(value.x()) && y_axis.Inside(value.y());
 	}
 
-	Point2f RandomSample(Float& pdf) const override
+	Point2d RandomSample(Float& pdf) const override
 	{
 		Float pdf_x;
 		Float pdf_y;
 		Float x = x_axis.RandomSample(pdf_x);
 		Float y = x_axis.RandomSample(pdf_y);
 		pdf = pdf_x * pdf_y;
-		return Point2f(x, y);
+		return Point2d(x, y);
 	}
 
 private:
@@ -170,10 +170,10 @@ public:
 		return true;
 	}
 
-	static Point2f UniformSampleTriangle(const Point2f& u)
+	static Point2d UniformSampleTriangle(const Point2d& u)
 	{
 		Float su0 = std::sqrt(u[0]);
-		return Point2f(1 - su0, u[1] * su0);
+		return Point2d(1 - su0, u[1] * su0);
 	}
 
 	Float Area() const
@@ -187,7 +187,7 @@ public:
 	{
 		Eigen::Vector2d u = rect_domain.RandomSample(pdf);
 
-		Point2f b = UniformSampleTriangle(u);
+		Point2d b = UniformSampleTriangle(u);
 
 		Eigen::Vector3d ret = b[0] * p0 + b[1] * p1 + (1 - b[0] - b[1]) * p2;
 		pdf /= Area();
@@ -253,13 +253,13 @@ public:
 		return Eigen::Vector2d(i, j);
 	}
 
-	RectDomain rect_domain = RectDomain(Point2f(0, 0), Point2f(1, 1));
+	RectDomain rect_domain = RectDomain(Point2d(0, 0), Point2d(1, 1));
 };
 
-class SphereDomain : public Domain<Point2f>
+class SphereDomain : public Domain<Point2d>
 {
 public:
-	bool Inside(const Point2f& value) const override
+	bool Inside(const Point2d& value) const override
 	{
 		return true;
 	}
@@ -269,15 +269,15 @@ public:
 	 * \param pdf
 	 * \return (theta,phi)
 	 */
-	Point2f RandomSample(Float& pdf) const override
+	Point2d RandomSample(Float& pdf) const override
 	{
 		Eigen::Vector3f vec = UniformSampleSphere(rect_domain.RandomSample(pdf));
 		pdf *= 1. / 4.0 / Pi;
 
-		return Point2f(SphericalTheta(vec), SphericalPhi(vec));
+		return Point2d(SphericalTheta(vec), SphericalPhi(vec));
 	}
 
-	static Eigen::Vector3f UniformSampleSphere(const Point2f& u)
+	static Eigen::Vector3f UniformSampleSphere(const Point2d& u)
 	{
 		Float z = 1 - 2 * u[0];
 		Float r = std::sqrt(std::max(static_cast<Float>(0), static_cast<Float>(1) - z * z));
@@ -297,5 +297,5 @@ public:
 	}
 
 	//For saving sample parameters for Rectdomain
-	RectDomain rect_domain = RectDomain(Point2f(0, 0), Point2f(1, 1));
+	RectDomain rect_domain = RectDomain(Point2d(0, 0), Point2d(1, 1));
 };

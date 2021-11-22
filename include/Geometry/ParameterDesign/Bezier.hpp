@@ -9,7 +9,7 @@
 class BezierApproximation :public Approximation
 {
 public:
-	BezierApproximation(const std::vector<Point2f>& p) : Approximation(p)
+	BezierApproximation(const std::vector<Point2d>& p) : Approximation(p)
 	{
 		evaluate();
 	}
@@ -37,7 +37,7 @@ public:
 	{
 		if (!Points.empty())
 		{
-			std::sort(Points.begin(), Points.end(), [](const Point2f& a, const Point2f& b) {	return a.x() < b.x(); });
+			std::sort(Points.begin(), Points.end(), [](const Point2d& a, const Point2d& b) {	return a.x() < b.x(); });
 
 			interval = Interval(Points[0].x(), Points.back().x());
 		}

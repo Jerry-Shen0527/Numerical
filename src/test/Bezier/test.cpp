@@ -15,7 +15,7 @@ protected:
 
 	void draw(bool* p_open) override;
 
-	std::vector<Point2f> points;
+	std::vector<Point2d> points;
 	bool updated = true;
 
 	void evaluate_bezier()

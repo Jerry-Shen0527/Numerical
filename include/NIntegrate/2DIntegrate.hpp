@@ -2,7 +2,7 @@
 
 #include"Integrate.hpp"
 
-class Integrate2D :public Integrate<Point2f>
+class Integrate2D :public Integrate<Point2d>
 {
 public:
 };

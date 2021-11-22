@@ -7,6 +7,7 @@
 #include "imgui/implot.h"
 #include "Visualization/Visualizer.h"
 #include "Geometry/ParameterDesign/ParameterCurve.h"
+#include "Geometry/ParameterDesign/Rational.h"
 
 class BezierVisualizer :public Visualizer
 {
@@ -16,25 +17,29 @@ protected:
 
 	void draw(bool* p_open) override;
 
-	std::vector<Point2f> points;
+	std::vector<Point2d> points;
+	std::vector<Float> weights;
 	bool updated = true;
 
 	void evaluate_bezier()
 	{
-		points.emplace_back(-2, -10);
-		points.emplace_back(-4, 2);
-		points.emplace_back(6, 5);
-		points.emplace_back(4, -7);
+		points.emplace_back(2, 0);
+		points.emplace_back(0, 1);
+		points.emplace_back(0, 2);
 
-		BSplineCurve bezier(points);
-		bezier.evaluate();
+		weights.push_back(1);
+		weights.push_back(1);
+		weights.push_back(2);
 
-		std::cout << bezier(1.);
+		RationalBSpline<3> RBS(points, weights);
+		RBS.evaluate();
+
+		std::cout << RBS(1.);
 
 		for (int i = 0; i < Length; ++i)
 		{
-			xs[i] = bezier(ctr_points[i]).x();
-			ys[i] = bezier(ctr_points[i]).y();
+			xs[i] = RBS(ctr_points[i]).x();
+			ys[i] = RBS(ctr_points[i]).y();
 		}
 
 		ctr_xs.resize(points.size());

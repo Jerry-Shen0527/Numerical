@@ -175,13 +175,13 @@ public:
 
 std::function<Float(Float)> LagrangianBase(int N, int i)
 {
-	std::vector<Point2f> points(N + 1);
+	std::vector<Point2d> points(N + 1);
 	Float h = 1.0 / N;
 	for (int i = 0; i <= N; ++i)
 	{
-		points[i] = Point2f(i * h, 0);
+		points[i] = Point2d(i * h, 0);
 	}
-	points[i] = Point2f(i * h, 1.0);
+	points[i] = Point2d(i * h, 1.0);
 	return LagrangianPolynomial(points);
 }
 
@@ -194,7 +194,7 @@ std::function<Float(Float)> LagrangianBaseDerivative(int N, int i)
 		{
 			if (missing != i)
 			{
-				std::vector<Point2f> points;
+				std::vector<Point2d> points;
 				Float h = 1.0 / N;
 
 				for (int j = 0; j <= N; ++j)

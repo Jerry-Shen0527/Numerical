@@ -71,7 +71,7 @@ protected:
 	void Control_UI();
 	void draw(bool* p_open) override;
 
-	std::vector<Point2f> points;
+	std::vector<Point2d> points;
 	bool updated = true;
 	int segemnt = 16;
 	float epsilon = 1E-7;

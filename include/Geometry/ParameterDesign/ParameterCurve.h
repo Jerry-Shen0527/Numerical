@@ -3,7 +3,7 @@
 #include "Interpolation.h"
 #include "MathFunctions.h"
 
-template<typename T, int dim>
+template <typename T, int dim>
 class ParameterCurve
 {
 protected:
@@ -15,7 +15,7 @@ public:
 	virtual ~ParameterCurve() = default;
 	virtual void evaluate() = 0;
 
-	ParameterCurve(const std::vector<T>& vec) :control_points(vec)
+	ParameterCurve(const std::vector<T>& vec) : control_points(vec)
 	{
 	}
 
@@ -35,11 +35,12 @@ public:
 	}
 };
 
-class BezierCurve2D : public ParameterCurve<Point2f, 2>
+template <int dim>
+class BezierCurveND : public ParameterCurve<Eigen::Matrix<Float, dim, 1, 0>, dim>
 {
 public:
-	explicit BezierCurve2D(const std::vector<Point2f>& points)
-		: ParameterCurve<Point2f, 2>(points)
+	explicit BezierCurveND(const std::vector<Eigen::Matrix<Float, dim, 1, 0>>& points)
+		: ParameterCurve<Eigen::Matrix<Float, dim, 1, 0>, dim>(points)
 	{
 	}
 
@@ -47,10 +48,10 @@ public:
 	{
 		int count = control_points.size();
 
-		for (int dim_i = 0; dim_i < 2; ++dim_i)
+		for (int dim_i = 0; dim_i < dim; ++dim_i)
 		{
 			Float h = 1.0 / (count - 1);
-			std::vector<Point2f> points;
+			std::vector<Point2d> points;
 			for (int i = 0; i < count; ++i)
 			{
 				points.emplace_back(i * h, control_points[i][dim_i]);
@@ -62,11 +63,11 @@ public:
 	}
 };
 
-class BezierSplineCurve : public ParameterCurve<Point2f, 2>
+class BezierSplineCurve : public ParameterCurve<Point2d, 2>
 {
 public:
-	explicit BezierSplineCurve(const std::vector<Point2f>& points)
-		: ParameterCurve<Point2f, 2>(points)
+	explicit BezierSplineCurve(const std::vector<Point2d>& points)
+		: ParameterCurve<Point2d, 2>(points)
 	{
 	}
 
@@ -78,7 +79,7 @@ public:
 		{
 			Float h = 1.0 / (count - 1);
 			if (count == 1)h = 0.0;
-			std::vector<Point2f> points;
+			std::vector<Point2d> points;
 			for (int i = 0; i < count; ++i)
 			{
 				points.emplace_back(i * h, control_points[i][dim_i]);
@@ -91,7 +92,7 @@ public:
 	}
 };
 
-class BSplineCurve : public ParameterCurve<Point2f, 2>
+class BSplineCurve : public ParameterCurve<Point2d, 2>
 {
 public:
 	explicit BSplineCurve(const std::vector<Eigen::Matrix<double, 2, 1, 0>>& matrices)
@@ -107,13 +108,13 @@ public:
 		{
 			Float h = 1.0 / (count - 1);
 			if (count == 1)h = 0.0;
-			std::vector<Point2f> points;
+			std::vector<Point2d> points;
 			for (int i = 0; i < count; ++i)
 			{
 				points.emplace_back(i * h, control_points[i][dim_i]);
 			}
 
-			BSplineApproximation<3,false> bezier(points);
+			BSplineApproximation<3, false> bezier(points);
 			bezier.evaluate();
 			function[dim_i] = bezier;
 		}
