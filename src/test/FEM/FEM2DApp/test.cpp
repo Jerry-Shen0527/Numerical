@@ -178,64 +178,75 @@
 #undef dim
 #include <OpenMesh/Core/IO/MeshIO.hh>
 
+#include "donut/engine/BindingCache.h"
+
 using namespace donut;
-using namespace donut::math;
-using namespace donut::app;
-using namespace donut::vfs;
-using namespace donut::engine;
+using namespace math;
+using namespace app;
+using namespace vfs;
+using namespace engine;
 
 static const char* g_WindowTitle = "Donut Example: Vertex Buffer";
 
 struct Vertex
 {
-	math::float3 position;
+	float3 position;
+	float3 normal;
 };
 
 struct UIData
 {
-	bool                                ShowUI = true;
-	bool                                ShowConsole = false;
-	bool                                UseDeferredShading = true;
-	bool                                Stereo = false;
-	bool                                EnableSsao = true;
+	bool ShowUI = true;
+	bool ShowConsole = false;
+	bool UseDeferredShading = true;
+	bool Stereo = false;
+	bool EnableSsao = true;
 
-	render::SkyParameters                       SkyParams;
+	render::SkyParameters SkyParams;
 
-	bool                                EnableVsync = true;
-	bool                                ShaderReoladRequested = false;
-	bool                                EnableProceduralSky = true;
-	bool                                EnableBloom = true;
-	float                               BloomSigma = 32.f;
-	float                               BloomAlpha = 0.05f;
-	bool                                EnableTranslucency = true;
-	bool                                EnableMaterialEvents = false;
-	bool                                EnableShadows = true;
-	float                               AmbientIntensity = 1.0f;
-	bool                                EnableLightProbe = true;
-	float                               LightProbeDiffuseScale = 1.f;
-	float                               LightProbeSpecularScale = 1.f;
-	float                               CsmExponent = 4.f;
-	bool                                DisplayShadowMap = false;
-	bool                                UseThirdPersonCamera = true;
-	bool                                EnableAnimations = false;
-	std::shared_ptr<Material>           SelectedMaterial;
-	std::shared_ptr<SceneGraphNode>     SelectedNode;
-	std::string                         ScreenshotFileName;
-	std::shared_ptr<SceneCamera>        ActiveSceneCamera;
+	bool EnableVsync = true;
+	bool ShaderReoladRequested = false;
+	bool EnableProceduralSky = true;
+	bool EnableBloom = true;
+	float BloomSigma = 32.f;
+	float BloomAlpha = 0.05f;
+	bool EnableTranslucency = true;
+	bool EnableMaterialEvents = false;
+	bool EnableShadows = true;
+	float AmbientIntensity = 1.0f;
+	bool EnableLightProbe = true;
+	float LightProbeDiffuseScale = 1.f;
+	float LightProbeSpecularScale = 1.f;
+	float CsmExponent = 4.f;
+	bool DisplayShadowMap = false;
+	bool UseThirdPersonCamera = true;
+	bool EnableAnimations = false;
+	std::shared_ptr<Material> SelectedMaterial;
+	std::shared_ptr<SceneGraphNode> SelectedNode;
+	std::string ScreenshotFileName;
+	std::shared_ptr<SceneCamera> ActiveSceneCamera;
 };
 
-auto rhs_func = [](Eigen::Vector3d vector) {
+auto rhs_func = [](Eigen::Vector3d vector)
+{
 	Float x = vector.x();
 	Float y = vector.y();
 
-	return  -10 * (-2 * cos(1 - y) * cos(y) * sin(1 - x) * sin(x) - 2 * cos(1 - x) * cos(x) * sin(1 - y) * sin(y) -
-		4 * sin(1 - x) * sin(x) * sin(1 - y) * sin(y)); };
+	return -10 * (-2 * cos(1 - y) * cos(y) * sin(1 - x) * sin(x) - 2 * cos(1 - x) * cos(x) * sin(1 - y) * sin(y) -
+		4 * sin(1 - x) * sin(x) * sin(1 - y) * sin(y));
+};
 
-class FEM2DVisualizer : public app::IRenderPass
+struct CameraPara
+{
+	float4x4 projview;
+	float3 cam_pos;
+};
+
+class FEM2DVisualizer : public IRenderPass
 {
 	std::vector<Vertex> g_Vertices;
 
-	std::vector< uint32_t> g_Indices;
+	std::vector<uint32_t> g_Indices;
 
 private:
 	nvrhi::ShaderHandle m_VertexShader;
@@ -254,401 +265,548 @@ private:
 public:
 	using IRenderPass::IRenderPass;
 
-	FEM2DVisualizer(DeviceManager* deviceManager, UIData& ui) :IRenderPass(deviceManager), m_ui(ui), fem_app(rhs_func, [](Eigen::Vector3d vector) {return 1.0; }, [](Eigen::Vector3d vector) {return 0.0; })
-	{
-	}
-	std::shared_ptr<NativeFileSystem> nativeFS;
-
-	void LoadSceneToGPU()
-	{
-		m_CommandList = GetDevice()->createCommandList();
-		m_CommandList->open();
-
-		nvrhi::BufferDesc vertexBufferDesc;
-		vertexBufferDesc.byteSize = sizeof(Vertex) * g_Vertices.size();
-		vertexBufferDesc.isVertexBuffer = true;
-		vertexBufferDesc.debugName = "VertexBuffer";
-		vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-		m_VertexBuffer = GetDevice()->createBuffer(vertexBufferDesc);
-
-		m_CommandList->beginTrackingBufferState(m_VertexBuffer, nvrhi::ResourceStates::CopyDest);
-		m_CommandList->writeBuffer(m_VertexBuffer, &g_Vertices[0], sizeof(Vertex) * g_Vertices.size());
-		m_CommandList->setPermanentBufferState(m_VertexBuffer, nvrhi::ResourceStates::VertexBuffer);
-
-		nvrhi::BufferDesc indexBufferDesc;
-		indexBufferDesc.byteSize = g_Indices.size() * sizeof(uint32_t);
-		indexBufferDesc.isIndexBuffer = true;
-		indexBufferDesc.debugName = "IndexBuffer";
-		indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
-		m_IndexBuffer = GetDevice()->createBuffer(indexBufferDesc);
-
-		m_CommandList->beginTrackingBufferState(m_IndexBuffer, nvrhi::ResourceStates::CopyDest);
-		m_CommandList->writeBuffer(m_IndexBuffer, &g_Indices[0], g_Indices.size() * sizeof(uint32_t));
-		m_CommandList->setPermanentBufferState(m_IndexBuffer, nvrhi::ResourceStates::IndexBuffer);
-
-		m_CommandList->close();
-		GetDevice()->executeCommandList(m_CommandList);
-	}
-
-	bool Init()
-	{
-		nativeFS = std::make_shared<vfs::NativeFileSystem>();
-
-		std::filesystem::path frameworkShaderPath = app::GetDirectoryWithExecutable() / "shaders/framework" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
-		std::filesystem::path appShaderPath = app::GetDirectoryWithExecutable() / "shaders/vertex_buffer" / app::GetShaderTypeName(GetDevice()->getGraphicsAPI());
-
-		m_RootFs = std::make_shared<vfs::RootFileSystem>();
-		m_RootFs->mount("/shaders/donut", frameworkShaderPath);
-		m_RootFs->mount("/shaders/app", appShaderPath);
-
-		m_SceneFilesAvailable = { "gd0.obj","gd1.obj","gd2.obj","gd3.obj","gd4.obj" };
-		SetCurrentSceneName("gd0.obj");
-
-		m_ShaderFactory = std::make_shared<engine::ShaderFactory>(GetDevice(), m_RootFs, "/shaders");
-		m_VertexShader = m_ShaderFactory->CreateShader("app/shaders.hlsl", "main_vs", nullptr, nvrhi::ShaderType::Vertex);
-		m_PixelShader = m_ShaderFactory->CreateShader("app/shaders.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
-
-		if (!m_VertexShader || !m_PixelShader)
-		{
-			return false;
-		}
-
-		m_ConstantBuffer = GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(sizeof(math::float4x4), "ConstantBuffer", engine::c_MaxRenderPassConstantBufferVersions));
-
-		nvrhi::VertexAttributeDesc attributes[] = {
-			nvrhi::VertexAttributeDesc()
-				.setName("POSITION")
-				.setFormat(nvrhi::Format::RGB32_FLOAT)
-				.setOffset(offsetof(Vertex, position))
-				.setElementStride(sizeof(Vertex)),
-		};
-		m_InputLayout = GetDevice()->createInputLayout(attributes, uint32_t(std::size(attributes)), m_VertexShader);
-
-		engine::CommonRenderPasses commonPasses(GetDevice(), m_ShaderFactory);
-		engine::TextureCache textureCache(GetDevice(), nativeFS, nullptr);
-
-		LoadSceneToGPU();
-
-		nvrhi::BindingSetDesc bindingSetDesc;
-		bindingSetDesc.bindings = {
-			nvrhi::BindingSetItem::ConstantBuffer(0, m_ConstantBuffer),
-		};
-
-		if (!nvrhi::utils::CreateBindingSetAndLayout(GetDevice(), nvrhi::ShaderType::All, 0, bindingSetDesc, m_BindingLayout, m_BindingSet))
-		{
-			log::error("Couldn't create the binding set or layout");
-			return false;
-		}
-
-		return true;
-	}
-
-	void Animate(float fElapsedTimeSeconds) override
-	{
-		if (!m_ui.ActiveSceneCamera)
-			GetActiveCamera().Animate(fElapsedTimeSeconds);
-		GetDeviceManager()->SetInformativeWindowTitle(g_WindowTitle);
-	}
-
-	void BackBufferResizing() override
-	{
-		m_Pipeline = nullptr;
-	}
-
-	void CopyActiveCameraToFirstPerson()
-	{
-		if (m_ui.ActiveSceneCamera)
-		{
-			dm::affine3 viewToWorld = m_ui.ActiveSceneCamera->GetViewToWorldMatrix();
-			dm::float3 cameraPos = viewToWorld.m_translation;
-			m_FirstPersonCamera.LookAt(cameraPos, cameraPos + viewToWorld.m_linear.row2, viewToWorld.m_linear.row1);
-		}
-		else if (m_ui.UseThirdPersonCamera)
-		{
-			m_FirstPersonCamera.LookAt(m_ThirdPersonCamera.GetPosition(), m_ThirdPersonCamera.GetPosition() + m_ThirdPersonCamera.GetDir(), m_ThirdPersonCamera.GetUp());
-		}
-	}
-
-	BaseCamera& GetActiveCamera() const
-	{
-		return m_ui.UseThirdPersonCamera ? (BaseCamera&)m_ThirdPersonCamera : (BaseCamera&)m_FirstPersonCamera;
-	}
-
-	std::shared_ptr<IView>              m_View;
-	std::shared_ptr<IView>              m_ViewPrevious;
-	float                               m_CameraVerticalFov = 60.f;
-
-	bool SetupView(nvrhi::IFramebuffer* framebuffer)
-	{
-		const nvrhi::FramebufferInfo& fbinfo = framebuffer->getFramebufferInfo();
-
-		float2 renderTargetSize = float2(fbinfo.width, fbinfo.height);
-
-		std::shared_ptr<StereoPlanarView> stereoView = std::dynamic_pointer_cast<StereoPlanarView, IView>(m_View);
-		std::shared_ptr<PlanarView> planarView = std::dynamic_pointer_cast<PlanarView, IView>(m_View);
-
-		dm::affine3 viewMatrix;
-		float verticalFov = dm::radians(m_CameraVerticalFov);
-		float zNear = 0.01f;
-		if (m_ui.ActiveSceneCamera)
-		{
-			auto perspectiveCamera = std::dynamic_pointer_cast<PerspectiveCamera>(m_ui.ActiveSceneCamera);
-			if (perspectiveCamera)
+	FEM2DVisualizer(DeviceManager* deviceManager, UIData& ui) : IRenderPass(deviceManager),
+		fem_app(rhs_func, [](Eigen::Vector3d vector)
 			{
-				zNear = perspectiveCamera->zNear;
-				verticalFov = perspectiveCamera->verticalFov;
+				return 1.0;
+			}, [](Eigen::Vector3d vector) { return 0.0; }),
+		m_ui(ui)
+	{
+	}
+
+			std::shared_ptr<NativeFileSystem> nativeFS;
+
+			void LoadSceneToGPU()
+			{
+				m_CommandList = GetDevice()->createCommandList();
+				m_CommandList->open();
+
+				nvrhi::BufferDesc vertexBufferDesc;
+				vertexBufferDesc.byteSize = sizeof(Vertex) * g_Vertices.size();
+				vertexBufferDesc.isVertexBuffer = true;
+				vertexBufferDesc.debugName = "VertexBuffer";
+				vertexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+				m_VertexBuffer = GetDevice()->createBuffer(vertexBufferDesc);
+
+				m_CommandList->beginTrackingBufferState(m_VertexBuffer, nvrhi::ResourceStates::CopyDest);
+				m_CommandList->writeBuffer(m_VertexBuffer, &g_Vertices[0], sizeof(Vertex) * g_Vertices.size());
+				m_CommandList->setPermanentBufferState(m_VertexBuffer, nvrhi::ResourceStates::VertexBuffer);
+
+				nvrhi::BufferDesc indexBufferDesc;
+				indexBufferDesc.byteSize = g_Indices.size() * sizeof(uint32_t);
+				indexBufferDesc.isIndexBuffer = true;
+				indexBufferDesc.debugName = "IndexBuffer";
+				indexBufferDesc.initialState = nvrhi::ResourceStates::CopyDest;
+				m_IndexBuffer = GetDevice()->createBuffer(indexBufferDesc);
+
+				m_CommandList->beginTrackingBufferState(m_IndexBuffer, nvrhi::ResourceStates::CopyDest);
+				m_CommandList->writeBuffer(m_IndexBuffer, &g_Indices[0], g_Indices.size() * sizeof(uint32_t));
+				m_CommandList->setPermanentBufferState(m_IndexBuffer, nvrhi::ResourceStates::IndexBuffer);
+
+				m_CommandList->close();
+				GetDevice()->executeCommandList(m_CommandList);
 			}
 
-			viewMatrix = m_ui.ActiveSceneCamera->GetWorldToViewMatrix();
-		}
-		else
-		{
-			viewMatrix = GetActiveCamera().GetWorldToViewMatrix();
-		}
+			std::shared_ptr<CommonRenderPasses> m_CommonPasses;
+			std::unique_ptr<BindingCache> m_BindingCache;
 
-		bool topologyChanged = false;
-
-		{
-			if (!planarView)
+			bool Init()
 			{
-				m_View = planarView = std::make_shared<PlanarView>();
-				m_ViewPrevious = std::make_shared<PlanarView>();
-				topologyChanged = true;
+				nativeFS = std::make_shared<NativeFileSystem>();
+
+				std::filesystem::path frameworkShaderPath = GetDirectoryWithExecutable() / "shaders/framework" /
+					GetShaderTypeName(GetDevice()->getGraphicsAPI());
+				std::filesystem::path appShaderPath = GetDirectoryWithExecutable() / "shaders/vertex_buffer" /
+					GetShaderTypeName(GetDevice()->getGraphicsAPI());
+
+				m_RootFs = std::make_shared<RootFileSystem>();
+				m_RootFs->mount("/shaders/donut", frameworkShaderPath);
+				m_RootFs->mount("/shaders/app", appShaderPath);
+
+				m_SceneFilesAvailable = { "gd0.obj", "gd1.obj", "gd2.obj", "gd3.obj", "gd4.obj" };
+				SetCurrentSceneName("gd0.obj");
+
+				m_ShaderFactory = std::make_shared<ShaderFactory>(GetDevice(), m_RootFs, "/shaders");
+				m_CommonPasses = std::make_shared<CommonRenderPasses>(GetDevice(), m_ShaderFactory);
+				m_BindingCache = std::make_unique<BindingCache>(GetDevice());
+
+				m_VertexShader = m_ShaderFactory->CreateShader("app/shaders.hlsl", "main_vs", nullptr,
+					nvrhi::ShaderType::Vertex);
+				m_PixelShader = m_ShaderFactory->CreateShader("app/shaders.hlsl", "main_ps", nullptr, nvrhi::ShaderType::Pixel);
+
+				if (!m_VertexShader || !m_PixelShader)
+				{
+					return false;
+				}
+
+				m_ConstantBuffer = GetDevice()->createBuffer(nvrhi::utils::CreateVolatileConstantBufferDesc(
+					sizeof(CameraPara), "ConstantBuffer",
+					c_MaxRenderPassConstantBufferVersions));
+
+				nvrhi::VertexAttributeDesc attributes[] = {
+					nvrhi::VertexAttributeDesc()
+					.setName("POSITION")
+					.setFormat(nvrhi::Format::RGB32_FLOAT)
+					.setOffset(offsetof(Vertex, position))
+					.setElementStride(sizeof(Vertex)),
+					nvrhi::VertexAttributeDesc()
+					.setName("NORMAL")
+					.setFormat(nvrhi::Format::RGB32_FLOAT)
+					.setOffset(offsetof(Vertex, normal))
+					.setElementStride(sizeof(Vertex)),
+				};
+
+				m_InputLayout = GetDevice()->createInputLayout(attributes, static_cast<uint32_t>(std::size(attributes)),
+					m_VertexShader);
+
+				CommonRenderPasses commonPasses(GetDevice(), m_ShaderFactory);
+				TextureCache textureCache(GetDevice(), nativeFS, nullptr);
+
+				LoadSceneToGPU();
+
+				nvrhi::BindingSetDesc bindingSetDesc;
+				bindingSetDesc.bindings = {
+					nvrhi::BindingSetItem::ConstantBuffer(0, m_ConstantBuffer),
+				};
+
+				if (!nvrhi::utils::CreateBindingSetAndLayout(GetDevice(), nvrhi::ShaderType::All, 0, bindingSetDesc,
+					m_BindingLayout, m_BindingSet))
+				{
+					log::error("Couldn't create the binding set or layout");
+					return false;
+				}
+
+				return true;
 			}
 
-			float4x4 projection = perspProjD3DStyleReverse(verticalFov, renderTargetSize.x / renderTargetSize.y, zNear);
-
-			planarView->SetViewport(nvrhi::Viewport(renderTargetSize.x, renderTargetSize.y));
-
-			planarView->SetMatrices(viewMatrix, projection);
-			planarView->UpdateCache();
-
-			m_ThirdPersonCamera.SetView(*planarView);
-
-			if (topologyChanged)
+			void Animate(float fElapsedTimeSeconds) override
 			{
-				*std::static_pointer_cast<PlanarView>(m_ViewPrevious) = *std::static_pointer_cast<PlanarView>(m_View);
-			}
-		}
-
-		return topologyChanged;
-	}
-
-	virtual bool MouseScrollUpdate(double xoffset, double yoffset) override
-	{
-		GetActiveCamera().MouseScrollUpdate(xoffset, yoffset);
-
-		return true;
-	}
-
-	virtual bool KeyboardUpdate(int key, int scancode, int action, int mods) override
-	{
-		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		{
-			m_ui.ShowUI = !m_ui.ShowUI;
-			return true;
-		}
-
-		if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
-		{
-			m_ui.ShowConsole = !m_ui.ShowConsole;
-			return true;
-		}
-
-		if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
-		{
-			m_ui.EnableAnimations = !m_ui.EnableAnimations;
-			return true;
-		}
-
-		if (key == GLFW_KEY_T && action == GLFW_PRESS)
-		{
-			CopyActiveCameraToFirstPerson();
-			if (m_ui.ActiveSceneCamera)
-			{
-				m_ui.UseThirdPersonCamera = false;
-				m_ui.ActiveSceneCamera = nullptr;
-			}
-			else
-			{
-				m_ui.UseThirdPersonCamera = !m_ui.UseThirdPersonCamera;
-			}
-			return true;
-		}
-
-		if (!m_ui.ActiveSceneCamera)
-			GetActiveCamera().KeyboardUpdate(key, scancode, action, mods);
-		return true;
-	}
-
-	uint2                               m_PickPosition = 0u;
-
-	virtual bool MousePosUpdate(double xpos, double ypos) override
-	{
-		GetActiveCamera().MousePosUpdate(xpos, ypos);
-
-		m_PickPosition = uint2(static_cast<uint>(xpos), static_cast<uint>(ypos));
-
-		return true;
-	}
-
-	bool m_Pick = false;
-	virtual bool MouseButtonUpdate(int button, int action, int mods) override
-	{
-		GetActiveCamera().MouseButtonUpdate(button, action, mods);
-
-		if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_2)
-			m_Pick = true;
-
-		return true;
-	}
-
-	void Render(nvrhi::IFramebuffer* framebuffer) override
-	{
-		const nvrhi::FramebufferInfo& fbinfo = framebuffer->getFramebufferInfo();
-
-		if (!m_Pipeline)
-		{
-			nvrhi::GraphicsPipelineDesc psoDesc;
-			psoDesc.VS = m_VertexShader;
-			psoDesc.PS = m_PixelShader;
-			psoDesc.inputLayout = m_InputLayout;
-			psoDesc.bindingLayouts = { m_BindingLayout };
-			psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
-			psoDesc.renderState.depthStencilState.depthTestEnable = false;
-
-			m_Pipeline = GetDevice()->createGraphicsPipeline(psoDesc, framebuffer);
-		}
-
-		m_CommandList->open();
-
-		nvrhi::utils::ClearColorAttachment(m_CommandList, framebuffer, 0, nvrhi::Color(0.f));
-
-		math::float4x4 projMatrix = math::perspProjD3DStyle(math::radians(60.f), float(fbinfo.width) / float(fbinfo.height), 0.1f, 10.f);
-
-		SetupView(framebuffer);
-
-		auto camera = GetActiveCamera();
-
-		math::float4x4 viewProjMatrix = math::affineToHomogeneous(camera.GetWorldToViewMatrix()) * projMatrix;
-
-		m_CommandList->writeBuffer(m_ConstantBuffer, &viewProjMatrix, sizeof(viewProjMatrix));
-
-		nvrhi::GraphicsState state;
-		state.bindings = { m_BindingSet };
-		state.indexBuffer = { m_IndexBuffer, nvrhi::Format::R32_UINT, 0 };
-		state.vertexBuffers = { { m_VertexBuffer, 0, 0 } };
-		state.pipeline = m_Pipeline;
-		state.framebuffer = framebuffer;
-		state.viewport.addViewportAndScissorRect(fbinfo.getViewport());
-
-		m_CommandList->setGraphicsState(state);
-
-		nvrhi::DrawArguments args;
-		args.vertexCount = g_Indices.size();
-		m_CommandList->drawIndexed(args);
-
-		m_CommandList->close();
-		GetDevice()->executeCommandList(m_CommandList);
-	}
-
-	std::string GetCurrentSceneName() const
-	{
-		return m_CurrentSceneName;
-	}
-
-	std::vector<std::string> const& GetAvailableScenes() const
-	{
-		return m_SceneFilesAvailable;
-	}
-
-	std::vector<std::string>& GetAvailableScenes()
-	{
-		return m_SceneFilesAvailable;
-	}
-
-	using FEMType = StaticFEM2DAppP1;
-
-	StaticFEM2DAppP1 fem_app;
-
-	void BeginLoadingScene(const std::shared_ptr<vfs::RootFileSystem>& root_fs, const std::string& string)
-	{
-		OpenMesh::IO::read_mesh(fem_app.GetMesh(), string);
-		auto mesh = fem_app.GetMesh();
-		auto vertices = mesh.vertices();
-
-		fem_app.evaluate();
-
-		g_Indices.clear();
-		g_Vertices.clear();
-
-		for (auto vertex : vertices)
-		{
-			auto point = mesh.point(vertex);
-
-			auto faces = vertex.faces();
-
-			float val = 0;
-			if (faces.begin() != faces.end())
-			{
-				int id = faces.begin()->idx();
-				val = fem_app.Value(id, Eigen::Vector3d(point[0], point[1], 0));
+				if (!m_ui.ActiveSceneCamera)
+					GetActiveCamera().Animate(fElapsedTimeSeconds);
+				GetDeviceManager()->SetInformativeWindowTitle(g_WindowTitle);
 			}
 
-			Vertex v = { {point[0],val,point[1] } };
-			g_Vertices.push_back(v);
-		}
-
-		auto faces = mesh.faces();
-
-		for (auto face : faces)
-		{
-			auto face_v = face.vertices();
-
-			for (auto v : face_v)
+			void BackBufferResizing() override
 			{
-				g_Indices.push_back(v.idx());
+				m_Pipeline = nullptr;
 			}
-		}
-	}
 
-	void SetCurrentSceneName(const std::string& sceneName)
-	{
-		if (m_CurrentSceneName == sceneName)
-			return;
+			void CopyActiveCameraToFirstPerson()
+			{
+				if (m_ui.ActiveSceneCamera)
+				{
+					affine3 viewToWorld = m_ui.ActiveSceneCamera->GetViewToWorldMatrix();
+					float3 cameraPos = viewToWorld.m_translation;
+					m_FirstPersonCamera.LookAt(cameraPos, cameraPos + viewToWorld.m_linear.row2, viewToWorld.m_linear.row1);
+				}
+				else if (m_ui.UseThirdPersonCamera)
+				{
+					m_FirstPersonCamera.LookAt(m_ThirdPersonCamera.GetPosition(),
+						m_ThirdPersonCamera.GetPosition() + m_ThirdPersonCamera.GetDir(),
+						m_ThirdPersonCamera.GetUp());
+				}
+			}
 
-		m_CurrentSceneName = sceneName;
+			BaseCamera& GetActiveCamera() const
+			{
+				return m_ui.UseThirdPersonCamera ? (BaseCamera&)m_ThirdPersonCamera : (BaseCamera&)m_FirstPersonCamera;
+			}
 
-		BeginLoadingScene(m_RootFs, m_CurrentSceneName);
+			std::shared_ptr<IView> m_View;
+			std::shared_ptr<IView> m_ViewPrevious;
+			float m_CameraVerticalFov = 60.f;
 
-		LoadSceneToGPU();
-	}
+			bool SetupView(nvrhi::IFramebuffer* framebuffer)
+			{
+				const nvrhi::FramebufferInfo& fbinfo = framebuffer->getFramebufferInfo();
 
-	std::shared_ptr<ShaderFactory> GetShaderFactory()
-	{
-		return m_ShaderFactory;
-	}
+				auto renderTargetSize = float2(fbinfo.width, fbinfo.height);
+
+				std::shared_ptr<StereoPlanarView> stereoView = std::dynamic_pointer_cast<StereoPlanarView, IView>(m_View);
+				std::shared_ptr<PlanarView> planarView = std::dynamic_pointer_cast<PlanarView, IView>(m_View);
+
+				affine3 viewMatrix;
+				float verticalFov = radians(m_CameraVerticalFov);
+				float zNear = 0.01f;
+				float zFar = 100.f;
+				if (m_ui.ActiveSceneCamera)
+				{
+					auto perspectiveCamera = std::dynamic_pointer_cast<PerspectiveCamera>(m_ui.ActiveSceneCamera);
+					if (perspectiveCamera)
+					{
+						zNear = perspectiveCamera->zNear;
+						if (perspectiveCamera->zFar.has_value())
+						{
+							zFar = perspectiveCamera->zFar.value();
+						}
+						verticalFov = perspectiveCamera->verticalFov;
+					}
+
+					viewMatrix = m_ui.ActiveSceneCamera->GetWorldToViewMatrix();
+				}
+				else
+				{
+					viewMatrix = GetActiveCamera().GetWorldToViewMatrix();
+				}
+
+				bool topologyChanged = false;
+
+				{
+					if (!planarView)
+					{
+						m_View = planarView = std::make_shared<PlanarView>();
+						m_ViewPrevious = std::make_shared<PlanarView>();
+						topologyChanged = true;
+					}
+
+					float4x4 projection = perspProjD3DStyle(verticalFov, renderTargetSize.x / renderTargetSize.y, zNear, zFar);
+
+					planarView->SetViewport(nvrhi::Viewport(renderTargetSize.x, renderTargetSize.y));
+
+					planarView->SetMatrices(viewMatrix, projection);
+					planarView->UpdateCache();
+
+					m_ThirdPersonCamera.SetView(*planarView);
+
+					if (topologyChanged)
+					{
+						*std::static_pointer_cast<PlanarView>(m_ViewPrevious) = *std::static_pointer_cast<PlanarView>(m_View);
+					}
+				}
+
+				return topologyChanged;
+			}
+
+			bool MouseScrollUpdate(double xoffset, double yoffset) override
+			{
+				GetActiveCamera().MouseScrollUpdate(xoffset, yoffset);
+
+				return true;
+			}
+
+			bool KeyboardUpdate(int key, int scancode, int action, int mods) override
+			{
+				if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+				{
+					m_ui.ShowUI = !m_ui.ShowUI;
+					return true;
+				}
+
+				if (key == GLFW_KEY_GRAVE_ACCENT && action == GLFW_PRESS)
+				{
+					m_ui.ShowConsole = !m_ui.ShowConsole;
+					return true;
+				}
+
+				if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+				{
+					m_ui.EnableAnimations = !m_ui.EnableAnimations;
+					return true;
+				}
+
+				if (key == GLFW_KEY_T && action == GLFW_PRESS)
+				{
+					CopyActiveCameraToFirstPerson();
+					if (m_ui.ActiveSceneCamera)
+					{
+						m_ui.UseThirdPersonCamera = false;
+						m_ui.ActiveSceneCamera = nullptr;
+					}
+					else
+					{
+						m_ui.UseThirdPersonCamera = !m_ui.UseThirdPersonCamera;
+					}
+					return true;
+				}
+
+				if (!m_ui.ActiveSceneCamera)
+					GetActiveCamera().KeyboardUpdate(key, scancode, action, mods);
+				return true;
+			}
+
+			uint2 m_PickPosition = 0u;
+
+			bool MousePosUpdate(double xpos, double ypos) override
+			{
+				GetActiveCamera().MousePosUpdate(xpos, ypos);
+
+				m_PickPosition = uint2(static_cast<uint>(xpos), static_cast<uint>(ypos));
+
+				return true;
+			}
+
+			bool m_Pick = false;
+
+			bool MouseButtonUpdate(int button, int action, int mods) override
+			{
+				GetActiveCamera().MouseButtonUpdate(button, action, mods);
+
+				if (action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_2)
+					m_Pick = true;
+
+				return true;
+			}
+
+			nvrhi::TextureHandle m_DepthBuffer;
+			nvrhi::TextureHandle m_ColorBuffer;
+			nvrhi::FramebufferHandle m_Framebuffer;
+
+			void Render(nvrhi::IFramebuffer* framebuffer) override
+			{
+				const nvrhi::FramebufferInfo& fbinfo = framebuffer->getFramebufferInfo();
+
+				if (!m_Pipeline)
+				{
+					nvrhi::TextureDesc textureDesc;
+					textureDesc.format = nvrhi::Format::SRGBA8_UNORM;
+					textureDesc.isRenderTarget = true;
+					textureDesc.initialState = nvrhi::ResourceStates::RenderTarget;
+					textureDesc.keepInitialState = true;
+					textureDesc.clearValue = nvrhi::Color(0.f);
+					textureDesc.useClearValue = true;
+					textureDesc.debugName = "ColorBuffer";
+					textureDesc.width = fbinfo.width;
+					textureDesc.height = fbinfo.height;
+					textureDesc.dimension = nvrhi::TextureDimension::Texture2D;
+					m_ColorBuffer = GetDevice()->createTexture(textureDesc);
+
+					textureDesc.format = nvrhi::Format::D24S8;
+					textureDesc.debugName = "DepthBuffer";
+					textureDesc.initialState = nvrhi::ResourceStates::DepthWrite;
+					m_DepthBuffer = GetDevice()->createTexture(textureDesc);
+
+					nvrhi::FramebufferDesc framebufferDesc;
+					framebufferDesc.addColorAttachment(m_ColorBuffer, nvrhi::AllSubresources);
+					framebufferDesc.setDepthAttachment(m_DepthBuffer);
+					m_Framebuffer = GetDevice()->createFramebuffer(framebufferDesc);
+
+					nvrhi::GraphicsPipelineDesc psoDesc;
+					psoDesc.VS = m_VertexShader;
+					psoDesc.PS = m_PixelShader;
+					psoDesc.inputLayout = m_InputLayout;
+					psoDesc.bindingLayouts = { m_BindingLayout };
+					psoDesc.primType = nvrhi::PrimitiveType::TriangleList;
+					psoDesc.renderState.depthStencilState.depthTestEnable = true;
+					psoDesc.renderState.depthStencilState.depthFunc = nvrhi::ComparisonFunc::GreaterOrEqual;
+					//psoDesc.renderState.rasterState.frontCounterClockwise = true;
+					psoDesc.renderState.rasterState.setCullNone();
+					m_Pipeline = GetDevice()->createGraphicsPipeline(psoDesc, m_Framebuffer);
+				}
+
+				m_CommandList->open();
+
+				m_CommandList->clearTextureFloat(m_ColorBuffer, nvrhi::AllSubresources, nvrhi::Color(1.f));
+				m_CommandList->clearDepthStencilTexture(m_DepthBuffer, nvrhi::AllSubresources, true, 0.f, true, 0);
+
+				//nvrhi::utils::ClearColorAttachment(m_CommandList, framebuffer, 0, nvrhi::Color(1.0f));
+				//nvrhi::utils::ClearDepthStencilAttachment(m_CommandList, framebuffer, 0, 0.0);
+
+				float4x4 projMatrix = perspProjD3DStyleReverse(radians(60.f),
+					static_cast<float>(fbinfo.width) / static_cast<float>(fbinfo.
+						height), 0.1f);
+
+				SetupView(framebuffer);
+
+				auto camera = GetActiveCamera();
+
+				CameraPara para;
+
+				para.projview = affineToHomogeneous(camera.GetWorldToViewMatrix()) * projMatrix;
+				para.cam_pos = camera.GetPosition();
+
+				m_CommandList->writeBuffer(m_ConstantBuffer, &para, sizeof(para));
+
+				nvrhi::GraphicsState state;
+				state.bindings = { m_BindingSet };
+				state.indexBuffer = { m_IndexBuffer, nvrhi::Format::R32_UINT, 0 };
+				state.vertexBuffers = { {m_VertexBuffer, 0, 0} };
+				state.pipeline = m_Pipeline;
+				state.framebuffer = m_Framebuffer;
+				state.viewport.addViewportAndScissorRect(fbinfo.getViewport());
+
+				m_CommandList->setGraphicsState(state);
+
+				nvrhi::DrawArguments args;
+				args.vertexCount = g_Indices.size();
+				m_CommandList->drawIndexed(args);
+				m_CommonPasses->BlitTexture(m_CommandList, framebuffer, m_ColorBuffer, m_BindingCache.get());
+
+				m_CommandList->close();
+				GetDevice()->executeCommandList(m_CommandList);
+			}
+
+			std::string GetCurrentSceneName() const
+			{
+				return m_CurrentSceneName;
+			}
+
+			const std::vector<std::string>& GetAvailableScenes() const
+			{
+				return m_SceneFilesAvailable;
+			}
+
+			std::vector<std::string>& GetAvailableScenes()
+			{
+				return m_SceneFilesAvailable;
+			}
+
+			using FEMType = StaticFEM2DAppP1;
+
+			StaticFEM2DAppP1 fem_app;
+
+			Float temp_tri_size = 0;
+			Float temp_diff_L1 = 0;
+			Float temp_diff_L2 = 0;
+			Float temp_diff_Linf = 0;
+
+			void BeginLoadingScene(const std::shared_ptr<RootFileSystem>& root_fs, const std::string& string)
+			{
+				OpenMesh::IO::read_mesh(fem_app.GetMesh(), string);
+				auto mesh = fem_app.GetMesh();
+				auto vertices = mesh.vertices();
+
+				fem_app.evaluate();
+
+				Float diff_L1 = 0;
+				Float diff_L2 = 0;
+				Float diff_Linf = 0;
+
+				auto faces = mesh.faces();
+
+				Float tri_size = 0;
+
+				for (auto face : faces)
+				{
+					int idx = face.idx();
+
+					TriangleDomain triangle = fem_app.BuildTriangleElement(idx);
+					tri_size += triangle.Area();
+
+					GaussIntegrate2D integrate;
+					auto accu_func = [](Eigen::Vector3d vector)
+					{
+						Float x = vector.x();
+						Float y = vector.y();
+
+						return 10 * sin(x) * sin(1 - x) * sin(y) * sin(1 - y);
+					};
+					diff_L1 += integrate([accu_func, this, idx](Eigen::Vector3d vector) {return abs(accu_func(vector) - fem_app.Value(idx, vector)); }, triangle);
+					diff_L2 += integrate([accu_func, this, idx](Eigen::Vector3d vector) {return pow(abs(accu_func(vector) - fem_app.Value(idx, vector)), 2.0); }, triangle);
+					diff_Linf += integrate([accu_func, this, idx](Eigen::Vector3d vector) {return pow(abs(accu_func(vector) - fem_app.Value(idx, vector)), 5.0); }, triangle);
+				}
+
+				diff_L2 = sqrt(diff_L2);
+				diff_Linf = pow(diff_Linf,0.2);
+
+				tri_size /= mesh.n_faces();
+				tri_size = sqrt(tri_size);
+
+				std::cout << tri_size << '&' << diff_L1 << '&' << std::log(temp_diff_L1 / diff_L1) / std::log(temp_tri_size / tri_size) <<
+					'&' << diff_L2 << '&' << std::log(temp_diff_L2 / diff_L2) / std::log(temp_tri_size / tri_size) <<
+					'&' << diff_Linf << '&' << std::log(temp_diff_Linf / diff_Linf) / std::log(temp_tri_size / tri_size)
+					<< "\\\\" << std::endl;
+
+				temp_tri_size = tri_size;
+				temp_diff_L1 = diff_L1;
+				temp_diff_L2 = diff_L2;
+				temp_diff_Linf = diff_Linf;
+
+				g_Indices.clear();
+				g_Vertices.clear();
+
+				//for (auto vertex : vertices)
+				//{
+				//	auto point = mesh.point(vertex);
+
+				//	auto faces = vertex.faces();
+
+				//	float val = 0;
+				//	if (faces.begin() != faces.end())
+				//	{
+				//		int id = faces.begin()->idx();
+				//		val = fem_app.Value(id, Eigen::Vector3d(point[0], point[1], 0));
+				//	}
+
+				//	Vertex v = { {point[0],val,point[1] } };
+				//	g_Vertices.push_back(v);
+				//}
+
+				int i = 0;
+
+				for (auto face : faces)
+				{
+					auto face_v = face.vertices_ccw();
+
+					for (auto vertex : face_v)
+					{
+						auto point = mesh.point(vertex);
+
+						auto faces = vertex.faces();
+
+						float val = 0;
+						if (faces.begin() != faces.end())
+						{
+							int id = faces.begin()->idx();
+							val = fem_app.Value(id, Eigen::Vector3d(point[0], point[1], 0));
+						}
+
+						Vertex v = { {point[0], val, point[1]} };
+						g_Vertices.push_back(v);
+
+						g_Indices.push_back(i++);
+					}
+				}
+
+				for (int i = 0; i < g_Vertices.size(); i += 3)
+				{
+					auto l1 = g_Vertices[i + 1].position - g_Vertices[i].position;
+					auto l2 = g_Vertices[i + 2].position - g_Vertices[i].position;
+					auto l3 = normalize(cross(l1, l2));
+
+					for (int j = 0; j < 3; ++j)
+					{
+						g_Vertices[i + j].normal = float3(l3.x, l3.y, l3.z);
+					}
+				}
+			}
+
+			void SetCurrentSceneName(const std::string& sceneName)
+			{
+				if (m_CurrentSceneName == sceneName)
+					return;
+
+				m_CurrentSceneName = sceneName;
+
+				BeginLoadingScene(m_RootFs, m_CurrentSceneName);
+
+				LoadSceneToGPU();
+			}
+
+			std::shared_ptr<ShaderFactory> GetShaderFactory()
+			{
+				return m_ShaderFactory;
+			}
 
 private:
 	UIData& m_ui;
 
-	std::vector<std::string>            m_SceneFilesAvailable;
+	std::vector<std::string> m_SceneFilesAvailable;
 
-	FirstPersonCamera                   m_FirstPersonCamera;
-	ThirdPersonCamera                   m_ThirdPersonCamera;
-	std::string                         m_CurrentSceneName;
+	FirstPersonCamera m_FirstPersonCamera;
+	ThirdPersonCamera m_ThirdPersonCamera;
+	std::string m_CurrentSceneName;
 
-	std::shared_ptr<vfs::RootFileSystem> m_RootFs;
-	std::shared_ptr<engine::ShaderFactory> m_ShaderFactory;
+	std::shared_ptr<RootFileSystem> m_RootFs;
+	std::shared_ptr<ShaderFactory> m_ShaderFactory;
 };
 
-class UIRenderer : public app::ImGui_Renderer
+class UIRenderer : public ImGui_Renderer
 {
 private:
 	std::shared_ptr<FEM2DVisualizer> m_app;
 
 	std::unique_ptr<ImGui_Console> m_console;
-	std::shared_ptr<engine::Light> m_SelectedLight;
+	std::shared_ptr<Light> m_SelectedLight;
 
 	UIData& m_ui;
 	nvrhi::CommandListHandle m_CommandList;
@@ -669,7 +827,7 @@ public:
 	}
 
 protected:
-	virtual void buildUI(void) override
+	void buildUI(void) override
 	{
 		if (!m_ui.ShowUI)
 			return;
@@ -685,7 +843,7 @@ protected:
 		}
 
 		ImGui::SetNextWindowPos(ImVec2(10.f, 10.f), 0);
-		ImGui::Begin("Settings", 0, ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::Begin("Settings", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 		ImGui::Text("Renderer: %s", GetDeviceManager()->GetRendererString());
 		double frameTime = GetDeviceManager()->GetAverageFrameTimeSeconds();
 		if (frameTime > 0.0)
@@ -715,8 +873,11 @@ protected:
 		ImGui::Checkbox("Stereo", &m_ui.Stereo);
 		ImGui::Checkbox("Animations", &m_ui.EnableAnimations);
 
-		if (ImGui::BeginCombo("Camera (T)", m_ui.ActiveSceneCamera ? m_ui.ActiveSceneCamera->GetName().c_str()
-			: m_ui.UseThirdPersonCamera ? "Third-Person" : "First-Person"))
+		if (ImGui::BeginCombo("Camera (T)", m_ui.ActiveSceneCamera
+			? m_ui.ActiveSceneCamera->GetName().c_str()
+			: m_ui.UseThirdPersonCamera
+			? "Third-Person"
+			: "First-Person"))
 		{
 			if (ImGui::Selectable("First-Person", !m_ui.ActiveSceneCamera && !m_ui.UseThirdPersonCamera))
 			{
@@ -780,10 +941,10 @@ protected:
 
 int main(int argc, const char** argv)
 {
-	nvrhi::GraphicsAPI api = app::GetGraphicsAPIFromCommandLine(argc, argv);
-	app::DeviceManager* deviceManager = app::DeviceManager::Create(api);
+	nvrhi::GraphicsAPI api = GetGraphicsAPIFromCommandLine(argc, argv);
+	DeviceManager* deviceManager = DeviceManager::Create(api);
 
-	app::DeviceCreationParameters deviceParams;
+	DeviceCreationParameters deviceParams;
 #ifdef _DEBUG
 	deviceParams.enableDebugRuntime = true;
 	deviceParams.enableNvrhiValidationLayer = true;
@@ -798,10 +959,10 @@ int main(int argc, const char** argv)
 	{
 		UIData uiData;
 
-		std::shared_ptr<FEM2DVisualizer> example = std::make_shared<FEM2DVisualizer>(deviceManager, uiData);
+		auto example = std::make_shared<FEM2DVisualizer>(deviceManager, uiData);
 		if (example->Init())
 		{
-			std::shared_ptr<UIRenderer> gui = std::make_shared<UIRenderer>(deviceManager, example, uiData);
+			auto gui = std::make_shared<UIRenderer>(deviceManager, example, uiData);
 
 			gui->Init(example->GetShaderFactory());
 
