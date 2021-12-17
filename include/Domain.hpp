@@ -24,7 +24,13 @@ public:
 	{
 		n = partition;
 		h = length() / static_cast<Float>(n);
-		knot_points.clear();
+
+		knot_points.resize(partition - 1);
+
+		for (int i = 0; i < n - 1; ++i)
+		{
+			knot_points[i] = (i + 1) * h;
+		}
 	}
 
 	int GetPartitionCount() const
@@ -45,6 +51,11 @@ public:
 		auto set = std::set<Float>(vector.begin(), vector.end());
 		knot_points = std::vector<Float>(set.begin(), set.end());
 		std::sort(knot_points.begin(), knot_points.end());
+	}
+
+	std::vector<Float> GetSubIntervalKnots() const
+	{
+		return knot_points;
 	}
 
 	Float RandomSample(Float& pdf) const override

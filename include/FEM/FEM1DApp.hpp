@@ -1,6 +1,7 @@
 #pragma once
 #include "Domain.hpp"
 #include "FEM.hpp"
+#include "FEM_MG.hpp"
 #include "Geometry/ParameterDesign/Interpolation.h"
 #include "NIntegrate/Integrate.hpp"
 
@@ -18,143 +19,17 @@ public:
 	}
 
 protected:
-	Float GradientSelfInnerProduct(int i, int j) override
-	{
-		std::vector<int> i_id, j_id;
-		auto i_mesh = IdxToMesh(i, i_id);
-		auto j_mesh = IdxToMesh(j, j_id);
+	Float GradientSelfInnerProduct(int i, int j) override;
+	Float GradientInnerProduct(int i, int j) override;
+	Float SelfInnerProduct(int i, int j) override;
+	Float RHSInnerProduct(int i) override;
 
-		Float ret = 0;
-
-		for (int a = 0; a < i_mesh.size(); ++a)
-		{
-			for (int b = 0; b < j_mesh.size(); ++b)
-			{
-				if (i_mesh[a] == j_mesh[b])
-				{
-					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctions[i_id[a]]),
-						sub_interval.remap(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), b_func, sub_interval);
-				}
-			}
-		}
-
-		return ret;
-	}
-	Float GradientInnerProduct(int i, int j) override
-	{
-		std::vector<int> i_id, j_id;
-		auto i_mesh = IdxToMesh(i, i_id);
-		auto j_mesh = IdxToMesh(j, j_id);
-
-		Float ret = 0;
-
-		for (int a = 0; a < i_mesh.size(); ++a)
-		{
-			for (int b = 0; b < j_mesh.size(); ++b)
-			{
-				if (i_mesh[a] == j_mesh[b])
-				{
-					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctionGradients[i_id[a]], 1.0 / sub_interval.length()),
-						sub_interval.remap(ShapeFunctionGradients[j_id[b]], 1.0 / sub_interval.length()), d_func, sub_interval);
-				}
-			}
-		}
-
-		return ret;
-	}
-
-	Float SelfInnerProduct(int i, int j) override
-	{
-		std::vector<int> i_id, j_id;
-		auto i_mesh = IdxToMesh(i, i_id);
-		auto j_mesh = IdxToMesh(j, j_id);
-
-		Float ret = 0;
-
-		for (int a = 0; a < i_mesh.size(); ++a)
-		{
-			for (int b = 0; b < j_mesh.size(); ++b)
-			{
-				if (i_mesh[a] == j_mesh[b])
-				{
-					auto sub_interval = interval.SubInterval(i_mesh[a]);
-					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctions[i_id[a]]), sub_interval.remap(ShapeFunctions[j_id[b]]), c_func, sub_interval);
-				}
-			}
-		}
-
-		return ret;
-	}
-
-	Float RHSInnerProduct(int i) override
-	{
-		std::vector<int> func_id;
-		auto i_mesh = IdxToMesh(i, func_id);
-
-		Float ret = 0;
-
-		for (int a = 0; a < func_id.size(); ++a)
-		{
-			auto sub_interval = interval.SubInterval(i_mesh[a]);
-			ret += L2InnerProduct(sub_interval.remap(ShapeFunctions[func_id[a]]), RHS_func, sub_interval);
-		}
-
-		return ret;
-	}
-
-	std::vector<int> RelatedFuncIdx(int idx) override
-	{
-		std::vector<int> ret;
-		std::vector<int> foo_id;
-
-		auto MeshIds = IdxToMesh(idx, foo_id);
-
-		std::set<int> set_ret;
-
-		for (auto mesh_id : MeshIds)
-		{
-			for (int i = 0; i < ShapeFunctions.size(); ++i)
-			{
-				int idx;
-				if (MeshToIdx(mesh_id, i, idx))
-				{
-					set_ret.emplace(idx);
-				}
-			}
-		}
-		ret.assign(set_ret.begin(), set_ret.end());
-		return ret;
-	}
+	std::vector<int> RelatedFuncIdx(int idx) override;
 
 	virtual std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) = 0;
 	virtual bool MeshToIdx(int mesh_idx, int shapefun_idx, int& idx) = 0;
 public:
-	Float Value(Float x) override
-	{
-		if (mat_size == 0)
-		{
-			return 0;
-		}
-		Float ret = 0;
-		for (int i = 0; i < interval.GetPartitionCount(); ++i)
-		{
-			auto sub_interval = interval.SubInterval(i);
-			if (sub_interval.Inside(x))
-			{
-				for (int j = 0; j < ShapeFunctions.size(); ++j)
-				{
-					int idx;
-					if (MeshToIdx(i, j, idx))
-					{
-						ret += sub_interval.remap(ShapeFunctions[j])(x) * rst(idx);
-					}
-				}
-			}
-		}
-		return ret;
-	}
+	Float Value(Float x) override;
 
 public:
 	std::vector<std::function<Float(Float)>> ShapeFunctions;
@@ -173,43 +48,8 @@ public:
 //******************Polynomial FEM App*************************//
 //*************************************************************//
 
-std::function<Float(Float)> LagrangianBase(int N, int i)
-{
-	std::vector<Point2d> points(N + 1);
-	Float h = 1.0 / N;
-	for (int i = 0; i <= N; ++i)
-	{
-		points[i] = Point2d(i * h, 0);
-	}
-	points[i] = Point2d(i * h, 1.0);
-	return LagrangianPolynomial(points);
-}
-
-std::function<Float(Float)> LagrangianBaseDerivative(int N, int i)
-{
-	return [=](Float x)
-	{
-		Float ret = 0;
-		for (int missing = 0; missing <= N; ++missing)
-		{
-			if (missing != i)
-			{
-				std::vector<Point2d> points;
-				Float h = 1.0 / N;
-
-				for (int j = 0; j <= N; ++j)
-					if (j != missing)
-						if (j == i)
-							points.emplace_back(j * h, 1.0);
-						else
-							points.emplace_back(j * h, 0.0);
-
-				ret += LagrangianPolynomial(points)(x) / (h * (i - missing));
-			}
-		}
-		return ret;
-	};
-}
+std::function<Float(Float)> LagrangianBase(int N, int i);
+std::function<Float(Float)> LagrangianBaseDerivative(int N, int i);
 
 template<int N>
 class PolynomialFEMApp :public StaticFEM1DApp
@@ -262,4 +102,106 @@ protected:
 	}
 
 public:
+};
+
+class StaticFEM1DMG final :public StaticFEM_Multigrid
+{
+public:
+	StaticFEM1DMG(const std::function<Float(Float)>& rhs_func,
+		const std::function<Float(Float)>& d_func, const std::function<Float(Float)>& b_func, const std::function<Float(Float)>& c_func,
+		const Interval& interval)
+	{
+		//Make sure the interval can be sub-partitioned.
+		assert(interval.GetPartitionCount() % 2 == 0 && interval.GetPartitionCount() > 2);
+		std::vector<Float> knots = interval.GetSubIntervalKnots();
+		solvers.insert(solvers.begin(), std::make_shared<PolynomialFEMApp<1>>(rhs_func, d_func, b_func, c_func, interval));
+
+		while (true)
+		{
+			if (knots.size() % 2 == 0 || knots.size() <= 1)
+			{
+				//When the interval has odd intervals, it's harder to map the points. However, it's not impossible.
+				//TODO::Possibly fully subdivide the interval.
+				break;
+			}
+			std::vector<Float> new_knots(knots.size() / 2);
+
+			Interval new_interval(interval.lerp(0), interval.lerp(1));
+			for (int i = 0; i < new_knots.size(); ++i)
+			{
+				new_knots[i] = knots[i * 2 + 1];
+			}
+			new_interval.SetSubIntervalKnots(new_knots);
+
+			solvers.insert(solvers.begin(), std::make_shared<PolynomialFEMApp<1>>(rhs_func, d_func, b_func, c_func, new_interval));
+			knots = new_knots;
+		}
+	}
+	Float Value(Float x)
+	{
+		std::shared_ptr<PolynomialFEMApp<1>> ptr = std::static_pointer_cast<PolynomialFEMApp<1>>(solvers.back());
+		return ptr->Value(x);
+	}
+private:
+
+	Vector I_k_down(const Vector& vec)
+	{
+		Vector ret(vec.rows() / 2);
+
+		auto size = ret.rows();
+
+		for (int i = 0; i < size; ++i)
+			ret[i] = vec[2 * i + 0] / 2 + vec[2 * i + 1] + vec[2 * i + 2] / 2;
+
+		return ret;
+	}
+
+	void ProjectDown(std::shared_ptr<StaticFEMwithCG> up, std::shared_ptr<StaticFEMwithCG> down) override
+	{
+		auto down_rhs = I_k_down(up->GetResidual());
+
+		//std::cout << "Project down:"<<down_rhs.transpose()<< std::endl;
+
+		down->SetRhs(down_rhs);
+		Vector zeros(down->GetRhs().rows());
+		zeros.setZero();
+		down->SetRst(zeros);
+	}
+
+	void ProjectUp(std::shared_ptr<StaticFEMwithCG> down, std::shared_ptr<StaticFEMwithCG> up) override
+	{
+		auto q = down->GetRst();
+
+		Vector up_correction(2 * q.rows() + 1);
+		std::shared_ptr<PolynomialFEMApp<1>> ptr = std::static_pointer_cast<PolynomialFEMApp<1>>(up);
+		auto knots = ptr->interval.GetSubIntervalKnots();
+
+		assert(knots.size() == 2 * q.rows() + 1);
+
+		int lerp_count = 0;
+		int direct_count = 0;
+		for (int i = 0; i < 2 * q.rows() + 1; ++i)
+		{
+			if (i % 2 != 0)
+			{
+				up_correction[i] = q[i / 2];
+				direct_count++;
+			}
+			else
+			{
+				lerp_count++;
+
+				Float left = i - 1 < 0 ? ptr->interval.lerp(0) : knots[i - 1];
+				Float left_val = i - 1 < 0 ? 0 : q[i / 2 - 1];
+				Float right = i >= 2 * q.rows() ? ptr->interval.lerp(1) : knots[i + 1];
+				Float right_val = i >= 2 * q.rows() ? 0 : q[i / 2];
+				Float middle = knots[i];
+				up_correction[i] = Lerp((middle - left) / (right - left), left_val, right_val);
+				//up_correction[i]
+			}
+		}
+
+		assert(lerp_count - direct_count == 1);
+		up->GetRst() += up_correction;
+	}
 };

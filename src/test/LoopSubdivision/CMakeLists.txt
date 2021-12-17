@@ -4,7 +4,7 @@ Ubpa_GetTargetName(visualize "${PROJECT_SOURCE_DIR}/src/Visualization")
 
 Ubpa_GetTargetName(project_ubpa ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(project app)
+set(project ${project_ubpa})
 
 set(folder ${CMAKE_CURRENT_SOURCE_DIR})
 message("target at ${project}_shaders")
