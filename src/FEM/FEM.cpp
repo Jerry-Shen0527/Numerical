@@ -1,6 +1,6 @@
 #include "FEM/FEM.hpp"
 
-bool StaticFEMwithCG::DoConjugateGradient(bool full)
+bool StaticFEMwithCG::DoConjugateGradient()
 {
 	bool solved = false;
 
@@ -14,16 +14,11 @@ bool StaticFEMwithCG::DoConjugateGradient(bool full)
 	Vector r = (rhs - matrix_ * rst);
 	Vector p = r;
 
-	for (int i = 0; i < (full ? size : 2); ++i)
+	for (int i = 0; i < size; ++i)
 	{
 		Float r_sqr = r.dot(r);
-
-		//std::cout << r_sqr << std::endl;
-		//if (r_sqr>1E8)
-		//{
-		//	system("pause");
-		//}
-		if (sqrt(r_sqr) < 1E-9)
+		std::cout << r_sqr << std::endl;
+		if (sqrt(r_sqr) < 1E-8)
 		{
 			solved = true;
 			break;

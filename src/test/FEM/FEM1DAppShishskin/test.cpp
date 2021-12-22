@@ -13,6 +13,9 @@
 using Linear = PolynomialFEMApp<1>;
 using Quadratic = PolynomialFEMApp<2>;
 
+using LinearSD = PolynomialFEMAppSD<1>;
+using QuadraticSD = PolynomialFEMAppSD<2>;
+
 class FEM1DVisualizer :public Visualizer
 {
 protected:
@@ -54,8 +57,8 @@ protected:
 		else
 			interval.SetPartitionCount(segement_);
 
-		Linear linear(rhs, d, b, c, interval);
-		Quadratic quadratic(rhs, d, b, c, interval);
+		LinearSD linear(rhs, d, b, c, interval);
+		QuadraticSD quadratic(rhs, d, b, c, interval);
 		linear.evaluate();
 		quadratic.evaluate();
 		for (int i = 0; i < Length; ++i)
@@ -153,12 +156,12 @@ public:
 			quadratic_Linf.push_back(L_inf);
 
 			segemnt *= 2;
-		} while (segemnt != 4096);
+		} while (segemnt != 8192);
 		segemnt = 16;
 
 		evaluate();
 	}
-	const size_t Length = 10001;
+	const size_t Length = 20001;
 
 	std::vector<float> xs = std::vector<float>(Length);
 	std::vector<float> precise_val = std::vector<float>(Length);

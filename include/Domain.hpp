@@ -24,20 +24,18 @@ public:
 	{
 		n = partition;
 		h = length() / static_cast<Float>(n);
-
+		//knot_points.clear();
 		knot_points.resize(partition - 1);
 
 		for (int i = 0; i < n - 1; ++i)
 		{
-			knot_points[i] = (i + 1) * h;
+			knot_points[i] = left + (i + 1) * h;
 		}
 	}
 
 	int GetPartitionCount() const
 	{
-		if (!knot_points.empty())
-			return knot_points.size() + 1;
-		return n;
+		return knot_points.size() + 1;
 	}
 
 	bool Inside(const Float& value) const override
@@ -78,7 +76,7 @@ public:
 	{
 		if (knot_points.empty())
 		{
-			return Interval(left + idx * h, left + (idx + 1) * h);
+			return *this;
 		}
 		if (idx == 0)
 		{

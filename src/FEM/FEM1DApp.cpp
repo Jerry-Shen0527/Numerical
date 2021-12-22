@@ -8,7 +8,6 @@ Float StaticFEM1DApp::GradientSelfInnerProduct(int i, int j)
 
 	Float ret = 0;
 
-#pragma omp parallel for
 	for (int a = 0; a < i_mesh.size(); ++a)
 	{
 		for (int b = 0; b < j_mesh.size(); ++b)
@@ -34,7 +33,6 @@ Float StaticFEM1DApp::GradientInnerProduct(int i, int j)
 
 	Float ret = 0;
 
-#pragma omp parallel for
 	for (int a = 0; a < i_mesh.size(); ++a)
 	{
 		for (int b = 0; b < j_mesh.size(); ++b)
@@ -60,7 +58,6 @@ Float StaticFEM1DApp::SelfInnerProduct(int i, int j)
 	auto j_mesh = IdxToMesh(j, j_id);
 
 	Float ret = 0;
-#pragma omp parallel for
 	for (int a = 0; a < i_mesh.size(); ++a)
 	{
 		for (int b = 0; b < j_mesh.size(); ++b)

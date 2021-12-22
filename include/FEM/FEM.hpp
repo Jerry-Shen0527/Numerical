@@ -15,6 +15,7 @@ public:
 	virtual void SolveMatrix()
 	{
 		Eigen::SparseLU<Eigen::SparseMatrix<Float>> solver;
+		//Eigen::SimplicialLDLT<Eigen::SparseMatrix<Float>> solver;
 
 		solver.compute(matrix_);
 		rst = solver.solve(rhs);
@@ -76,6 +77,11 @@ public:
 	virtual void SetMatSize() = 0;
 	virtual void FillMatrix() = 0;
 	virtual void FillRhs() = 0;
+
+	virtual void Smooth()
+	{
+		throw std::runtime_error("Not implemented!");
+	}
 protected:
 
 	virtual Float GradientInnerProduct(int i, int j) = 0;
@@ -94,7 +100,7 @@ protected:
 class StaticFEMwithCG :public StaticFEM
 {
 public:
-	bool DoConjugateGradient(bool full = true);
+	bool DoConjugateGradient();
 
 public:
 	inline static Float time_last_cg = std::numeric_limits<Float>::infinity();
@@ -128,7 +134,7 @@ public:
 	}
 };
 
-class StaticFEM1D :public StaticFEMwithCG
+class StaticFEM1D :public StaticFEM
 {
 protected:
 	StaticFEM1D()

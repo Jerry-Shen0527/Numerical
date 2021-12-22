@@ -82,24 +82,11 @@ public:
 			i++;
 		}
 
-		//cout << "MG iteration times: " << i << std::endl;
-
 		// do something...
 		rst = solvers.back()->GetRst();
-
-		auto end = system_clock::now();
-		auto duration = duration_cast<nanoseconds>(end - start).count();
-
-		duration = smooth_count;
-		//cout << "MG takes " << double(duration) << " nanoseconds. " << std::endl;
-		cout << rst.rows() + 1 << "&" << double(duration) << "&" << log2(double(duration) / time_last) << "&";
-		time_last = double(duration);
-
-		smooth_count = 0;
-		//cout <<  double(duration) << ", ";
 	}
 
-	void MG(std::vector<std::shared_ptr<StaticFEMwithCG>> solvers)
+	void MG(std::vector<std::shared_ptr<StaticFEM>> solvers)
 	{
 		//assert(solvers.size() > 1);
 		if (solvers.size() == 1)
@@ -128,15 +115,15 @@ public:
 		}
 	}
 
-	void Smooth(std::shared_ptr<StaticFEMwithCG> solver)
+	void Smooth(std::shared_ptr<StaticFEM> solver)
 	{
-		solver->DoConjugateGradient(false);
+		solver->Smooth();
 		smooth_count += solver->GetRst().rows();
 	}
 	inline static int smooth_count = 0;
 protected:
-	virtual void ProjectDown(std::shared_ptr<StaticFEMwithCG> up, std::shared_ptr<StaticFEMwithCG> down) = 0;
-	virtual void ProjectUp(std::shared_ptr<StaticFEMwithCG> down, std::shared_ptr<StaticFEMwithCG> up) = 0;
+	virtual void ProjectDown(std::shared_ptr<StaticFEM> up, std::shared_ptr<StaticFEM> down) = 0;
+	virtual void ProjectUp(std::shared_ptr<StaticFEM> down, std::shared_ptr<StaticFEM> up) = 0;
 
 private:
 	const int preSmoothPass = 1;
@@ -146,7 +133,7 @@ private:
 	const int postSmoothPass = 1;
 
 protected:
-	std::vector<std::shared_ptr<StaticFEMwithCG>> solvers;
+	std::vector<std::shared_ptr<StaticFEM>> solvers;
 };
 
 //int StaticFEM_Multigrid::smooth_count = 0;

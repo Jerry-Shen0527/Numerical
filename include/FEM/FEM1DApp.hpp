@@ -69,7 +69,6 @@ public:
 		}
 	}
 
-protected:
 	std::vector<int> IdxToMesh(int idx, std::vector<int>& shapeFuncId) override
 	{
 		if ((1 + idx) % N != 0)
@@ -96,12 +95,74 @@ protected:
 		return true;
 	}
 
+protected:
+
 	void SetMatSize() override
 	{
 		mat_size = N * interval.GetPartitionCount() - 1;
 	}
 
 public:
+};
+
+template<typename T>
+std::function<double(T)> operator+(const std::function<double(T)>& f1, const std::function<double(T)>& f2)
+{
+	return [=](T t) {return f1(t) + f2(t); };
+}
+
+template<int N>
+class PolynomialFEMAppSD :public PolynomialFEMApp<N>
+{
+public:
+	PolynomialFEMAppSD(const std::function<Float(Float)>& rhs_func, const std::function<Float(Float)>& d_func,
+		const std::function<Float(Float)>& b_func, const std::function<Float(Float)>& c_func, const Interval& interval)
+		: PolynomialFEMApp<N>(rhs_func, d_func, b_func, c_func, interval)
+	{
+	}
+
+protected:
+	Float GradientSelfInnerProduct(int i, int j) override
+	{
+		std::vector<int> i_id, j_id;
+		auto i_mesh = this->IdxToMesh(i, i_id);
+		auto j_mesh = this->IdxToMesh(j, j_id);
+
+		Float ret = 0;
+
+#pragma omp parallel for
+		for (int a = 0; a < i_mesh.size(); ++a)
+		{
+			for (int b = 0; b < j_mesh.size(); ++b)
+			{
+				if (i_mesh[a] == j_mesh[b])
+				{
+					auto sub_interval = interval.SubInterval(i_mesh[a]);
+					ret += WeightedL2InnerProduct(sub_interval.remap(ShapeFunctions[i_id[a]]) + sub_interval.remap(ShapeFunctionGradients[i_id[a]]),
+						sub_interval.remap(ShapeFunctionGradients[j_id[b]],
+							1.0 / sub_interval.length()), b_func, sub_interval);
+				}
+			}
+		}
+
+		return ret;
+	}
+
+	Float RHSInnerProduct(int i) override
+	{
+		std::vector<int> func_id;
+		auto i_mesh = this->IdxToMesh(i, func_id);
+
+		Float ret = 0;
+
+		for (int a = 0; a < func_id.size(); ++a)
+		{
+			auto sub_interval = interval.SubInterval(i_mesh[a]);
+			ret += L2InnerProduct(sub_interval.remap(this->ShapeFunctions[func_id[a]]) + sub_interval.remap(this->ShapeFunctionGradients[func_id[a]]), this->RHS_func, sub_interval);
+		}
+
+		return ret;
+	}
 };
 
 class StaticFEM1DMG final :public StaticFEM_Multigrid
@@ -156,7 +217,7 @@ private:
 		return ret;
 	}
 
-	void ProjectDown(std::shared_ptr<StaticFEMwithCG> up, std::shared_ptr<StaticFEMwithCG> down) override
+	void ProjectDown(std::shared_ptr<StaticFEM> up, std::shared_ptr<StaticFEM> down) override
 	{
 		auto down_rhs = I_k_down(up->GetResidual());
 
@@ -168,7 +229,7 @@ private:
 		down->SetRst(zeros);
 	}
 
-	void ProjectUp(std::shared_ptr<StaticFEMwithCG> down, std::shared_ptr<StaticFEMwithCG> up) override
+	void ProjectUp(std::shared_ptr<StaticFEM> down, std::shared_ptr<StaticFEM> up) override
 	{
 		auto q = down->GetRst();
 

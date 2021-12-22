@@ -11,6 +11,7 @@ Ubpa_InitProject()
 find_package(Vulkan REQUIRED FATAL_ERROR)
 find_package(glfw3 REQUIRED FATAL_ERROR)
 
+find_package(Torch REQUIRED)
 
 message(STATUS "find package: eigen")
 find_package(Eigen3 QUIET)
