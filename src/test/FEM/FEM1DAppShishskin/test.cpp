@@ -13,8 +13,8 @@
 using Linear = PolynomialFEMApp<1>;
 using Quadratic = PolynomialFEMApp<2>;
 
-using LinearSD = PolynomialFEMAppSD<1>;
-using QuadraticSD = PolynomialFEMAppSD<2>;
+using LinearDG = PolynomialFEMAppSD<1>;
+using QuadraticDG = PolynomialFEMAppSD<2>;
 
 class FEM1DVisualizer :public Visualizer
 {
@@ -57,8 +57,8 @@ protected:
 		else
 			interval.SetPartitionCount(segement_);
 
-		LinearSD linear(rhs, d, b, c, interval);
-		QuadraticSD quadratic(rhs, d, b, c, interval);
+		LinearDG linear(rhs, d, b, c, interval);
+		QuadraticDG quadratic(rhs, d, b, c, interval);
 		linear.evaluate();
 		quadratic.evaluate();
 		for (int i = 0; i < Length; ++i)
@@ -78,7 +78,7 @@ protected:
 	bool updated = true;
 	int segemnt = 16;
 	float epsilon = 1E-7;
-	bool use_shishkin = true;
+	bool use_shishkin = false;
 
 	void error(std::vector<float>& ref, std::vector<float>& eval, Float& L_1, Float& L_2, Float& L_inf)
 	{
@@ -131,12 +131,12 @@ public:
 			using std::cout;
 			using std::endl;
 
-			//if (segemnt == 16)
-			//{
-			//	cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
-			//}
-			//else
-			//	cout << segemnt << '&' << L1 << '&' <<- log2(L1 / linear_L1.back()) << '&' << L2 << '&' << -log2(L2 / linear_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / linear_Linf.back()) << "\\\\" << endl;
+			if (segemnt == 16)
+			{
+				cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
+			}
+			else
+				cout << segemnt << '&' << L1 << '&' <<- log2(L1 / linear_L1.back()) << '&' << L2 << '&' << -log2(L2 / linear_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / linear_Linf.back()) << "\\\\" << endl;
 
 			pointcount.push_back(segemnt);
 			linear_L1.push_back(L1);
@@ -144,12 +144,12 @@ public:
 			linear_Linf.push_back(L_inf);
 			error(precise_val, quadratic_val, L1, L2, L_inf);
 
-						if (segemnt == 16)
-			{
-				cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
-			}
-			else
-				cout << segemnt << '&' << L1 << '&' <<- log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
+			//if (segemnt == 16)
+			//{
+			//	cout << segemnt << '&' << L1 << '&' << '-' << '&' << L2 << '&' << '-' << '&' << L_inf << '&' << '-' << "\\\\" << endl;
+			//}
+			//else
+			//	cout << segemnt << '&' << L1 << '&' << -log2(L1 / quadratic_L1.back()) << '&' << L2 << '&' << -log2(L2 / quadratic_L2.back()) << '&' << L_inf << '&' << -log2(L_inf / quadratic_Linf.back()) << "\\\\" << endl;
 
 			quadratic_L1.push_back(L1);
 			quadratic_L2.push_back(L2);
