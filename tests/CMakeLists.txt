@@ -40,14 +40,8 @@ foreach(file ${test_sources})
 
   message("project lib for test: ${CMAKE_PROJECT_NAME}_LIB")
 
-  if(${CMAKE_PROJECT_NAME}_BUILD_EXECUTABLE)
-    set(${CMAKE_PROJECT_NAME}_TEST_LIB ${CMAKE_PROJECT_NAME}_LIB)
-  else()
-    set(${CMAKE_PROJECT_NAME}_TEST_LIB ${CMAKE_PROJECT_NAME})
-  endif()
-
+  set(${CMAKE_PROJECT_NAME}_TEST_LIB ${CMAKE_PROJECT_NAME})
   if(${CMAKE_PROJECT_NAME}_USE_GTEST)
-    find_package(GTest REQUIRED)
 
     if(${CMAKE_PROJECT_NAME}_USE_GOOGLE_MOCK)
       set(GOOGLE_MOCK_LIBRARIES GTest::gmock GTest::gmock_main)
@@ -56,8 +50,7 @@ foreach(file ${test_sources})
     target_link_libraries(
       ${test_name}_test
       PUBLIC
-        GTest::GTest
-        GTest::Main
+        GTest::gtest_main
         ${GOOGLE_MOCK_LIBRARIES}
         ${${CMAKE_PROJECT_NAME}_TEST_LIB}
     )
@@ -74,7 +67,7 @@ foreach(file ${test_sources})
     NAME
       ${test_name}
     COMMAND
-      ${test_name}_Tests
+      ${test_name}_test
   )
 endforeach()
 
