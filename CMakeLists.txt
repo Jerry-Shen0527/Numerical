@@ -18,7 +18,7 @@ message("sources : ${jit_sources}")
 add_library(${PROJECT_NAME} ${Numerical_sources})
 
 add_subdirectory(ext/drjit)
-target_link_libraries(${PROJECT_NAME} drjit drjit-core)
+target_link_libraries(${PROJECT_NAME} drjit drjit-core drjit-autodiff)
 
 set(OUTPUT_DIR 
   RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}"
@@ -38,7 +38,11 @@ set_target_properties(
   ${OUTPUT_DIR}
 )
 
-
+set_target_properties(
+  drjit-autodiff
+  PROPERTIES
+  ${OUTPUT_DIR}
+)
 
 if(${PROJECT_NAME}_ENABLE_UNIT_TESTING)
   enable_testing()
